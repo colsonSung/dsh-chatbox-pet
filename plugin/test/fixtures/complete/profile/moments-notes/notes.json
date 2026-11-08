@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "notes": [
+    {
+      "id": "n1",
+      "content": "今天把提示词增强插件的来源收集写完了，关键词是插件和记忆。",
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000300000,
+      "deletedAt": null,
+      "pinned": false
+    },
+    {
+      "id": "n2",
+      "content": "天气不错，去楼下走了一圈，顺便买了咖啡。",
+      "createdAt": 1700000400000,
+      "updatedAt": 1700000500000,
+      "deletedAt": null,
+      "pinned": false
+    },
+    {
+      "id": "n3",
+      "content": "已删除的瞬间不应该出现在上下文里，插件也不算。",
+      "createdAt": 1700000600000,
+      "updatedAt": 1700000700000,
+      "deletedAt": 1700000800000,
+      "pinned": false
+    },
+    {
+      "id": "n4",
+      "content": "读书笔记要支持 bookId 关联，插件章节标题也要带上。",
+      "createdAt": 1700000200000,
+      "updatedAt": 1700000250000,
+      "deletedAt": null,
+      "pinned": true
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "bk_alpha",
+  "title": "Pricing Design",
+  "author": "Dan Mall",
+  "format": "pdf",
+  "chapters": [
+    { "title": "第一章 定价与价值", "paragraphs": ["定价是一种产品设计。"] },
+    { "title": "第二章 定价页面", "paragraphs": [] }
+  ],
+  "addedAt": 1700000000000,
+  "progress": {
+    "unitIndex": 0,
+    "chapterIndex": 0,
+    "percent": 0.42,
+    "updatedAt": 1700001400000
+  },
+  "cover": null
+}

@@ -1,0 +1,20 @@
+{
+  "note-a": {
+    "id": "note-a",
+    "bookId": "bk_alpha",
+    "unitIndex": 0,
+    "quote": "定价是一种产品设计",
+    "text": "定价要跟着价值走，不要按成本定价。",
+    "createdAt": 1700001000000,
+    "updatedAt": 1700001100000
+  },
+  "note-b": {
+    "id": "note-b",
+    "bookId": "bk_missing",
+    "unitIndex": 2,
+    "quote": "",
+    "text": "插件里的读书笔记要能关联到书名。",
+    "createdAt": 1700001200000,
+    "updatedAt": 1700001300000
+  }
+}

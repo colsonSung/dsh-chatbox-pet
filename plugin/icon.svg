@@ -1,0 +1,19 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="4" y="14" width="28" height="18" rx="9" stroke="url(#cbp-box)" stroke-width="2.4"/>
+  <path d="M8 20h12M8 25h7" stroke="url(#cbp-box)" stroke-width="2.2" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="26" cy="9" r="6.5" fill="url(#cbp-pet)"/>
+  <path d="M23.2 6.6l-1.6-3.2 3.4 1.4M28.8 6.6l1.6-3.2-3.4 1.4" fill="url(#cbp-pet)"/>
+  <circle cx="24.2" cy="8.6" r="0.9" fill="#5b3a00"/>
+  <circle cx="27.8" cy="8.6" r="0.9" fill="#5b3a00"/>
+  <path d="M25.2 11.2c.5.5 1.1.5 1.6 0" stroke="#5b3a00" stroke-width="0.9" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="cbp-box" x1="4" y1="14" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B4690E"/>
+      <stop offset="1" stop-color="#8A4F0A"/>
+    </linearGradient>
+    <linearGradient id="cbp-pet" x1="19.5" y1="2.5" x2="32.5" y2="15.5" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD34D"/>
+      <stop offset="1" stop-color="#F0A020"/>
+    </linearGradient>
+  </defs>
+</svg>

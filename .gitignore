@@ -1,0 +1,25 @@
+node_modules
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+*.log
+.DS_Store
+*.tgz
+
+# Runtime state and credentials — never commit these.
+state.json
+*.state.json
+.env
+.env.*
+*.pem
+*.key
+credentials*
+
+# Playwright CLI trace artifacts: local tool output, not source.
+.playwright-cli/
+
+# The pet pack itself lives in ~/.dsh/dsh-pet and is NOT part of this plugin:
+# the clips are third-party character artwork and ship with the desktop pet.
+packs/
+*.webm
+*.mov
