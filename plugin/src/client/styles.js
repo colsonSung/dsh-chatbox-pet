@@ -431,4 +431,54 @@ body[data-ds-dark-theme] .cbp-bubble::before{
   letter-spacing:.04em;
   opacity:.75;
 }
+
+/*
+ * The queue-merge chip in the composer tool row.
+ *
+ * Same 28px ghost footprint as the Host's own tool buttons so the row keeps one
+ * rhythm; the count rides in a small pill because "how many will this fold" is
+ * the only question the reader has before clicking. It only ever renders while
+ * a queue exists, so the row never carries a permanently disabled control.
+ */
+.cbp-merge{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  height:28px;
+  padding:0 6px 0 5px;
+  border:0;
+  border-radius:var(--dsw-radius-md);
+  background:transparent;
+  color:var(--dsw-alias-label-secondary);
+  font:inherit;
+  font-size:12px;
+  cursor:pointer;
+  transition:background-color 120ms ease,color 120ms ease;
+}
+.cbp-merge:hover{
+  background:var(--dsw-alias-interactive-bg-hover);
+  color:var(--dsw-alias-label-primary);
+}
+.cbp-merge:focus-visible{
+  outline:2px solid var(--dsw-alias-brand-primary);
+  outline-offset:1px;
+}
+.cbp-merge[disabled]{cursor:default;opacity:.6;}
+.cbp-merge-count{
+  min-width:16px;
+  height:16px;
+  padding:0 4px;
+  border-radius:999px;
+  background:color-mix(in oklab,var(--dsw-alias-brand-primary) 16%,transparent);
+  color:var(--dsw-alias-brand-primary);
+  font-size:11px;
+  font-weight:600;
+  line-height:16px;
+  text-align:center;
+}
+@keyframes cbp-merge-spin{to{transform:rotate(360deg);}}
+.cbp-merge[data-cbp-merge-phase="running"] svg{animation:cbp-merge-spin 900ms linear infinite;}
+@media (prefers-reduced-motion:reduce){
+  .cbp-merge[data-cbp-merge-phase="running"] svg{animation:none;}
+}
 `;

@@ -106,3 +106,20 @@ export function IconChevronDown({ size = 16 }) {
     stroke: 'currentColor',
   }));
 }
+
+/**
+ * The merge mark: two stacked lines collapsing into one, drawn left-to-right on
+ * the same 16px grid as the rest of the set. No arrows chase the reader — the
+ * shape says "several become one" without a legend.
+ * @param {object} props - `{ size }`.
+ * @returns {object} the svg element.
+ */
+export function IconMerge({ size = 16 }) {
+  return h(Icon, { size }, [
+    h('path', { key: 'a', d: 'M2.5 4.5h5', stroke: 'currentColor' }),
+    h('path', { key: 'b', d: 'M2.5 11.5h5', stroke: 'currentColor' }),
+    h('path', { key: 'c', d: 'M10.5 4.5h3', stroke: 'currentColor' }),
+    h('path', { key: 'd', d: 'M10.5 11.5h3', stroke: 'currentColor' }),
+    h('path', { key: 'e', d: 'M8 4.5l2.5 3.5L8 11.5', stroke: 'currentColor' }),
+  ]);
+}

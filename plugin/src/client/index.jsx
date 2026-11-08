@@ -21,6 +21,7 @@ import { CSS } from './styles.js';
 import { prefsStore } from './prefs.js';
 import { SettingsRow, SETTINGS_CSS } from './settings-row.jsx';
 import { BoostButton } from './boost/button.jsx';
+import { QueueMergeButton } from './queue-merge.jsx';
 import { en as boostEn, NS as BOOST_NS, zh as boostZh } from './boost/locale.js';
 import { BoostDock } from './boost/panel.jsx';
 import { boostStore } from './boost/store.js';
@@ -148,6 +149,43 @@ export function apply(ctx) {
       boostGate((props) => <BoostButton {...props} store={boostStore} t={tBoost} locale={locale} />),
     ),
   );
+  // The queue-merge chip: one control that folds 2..8 waiting messages into one.
+  // It is not behind a switch — it only exists while there is a queue to fold, so
+  // there is nothing to leave on.
+  ctx.slots.inject('conversation.input.left', () =>
+    ctx.slots.register(
+      {
+        name: 'conversation.input.left',
+        id: '@local/chatbox-pet/merge',
+        order: 3,
+        label: () => t('merge.label')(2),
+        locale: NS,
+        inject: (sessionId) => ({ sessionId }),
+      },
+      (props) => {
+        const sessionId = typeof props?.sessionId === 'string' ? props.sessionId : '';
+        if (sessionId === '') return null;
+        return (
+          <QueueMergeButton
+            sessionId={sessionId}
+            sessions={ctx.get('sessions')}
+            t={t}
+            locale={locale}
+            onNotice={(text) => {
+              // Let the pet say it: the reader is looking at the composer, and a
+              // toast would cover the very queue the merge just changed.
+              void fetch('/api/chatbox-pet/broadcast', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ session: sessionId, text, durationMs: 4000 }),
+              }).catch(() => {});
+            }}
+          />
+        );
+      },
+    ),
+  );
+
   ctx.slots.inject('conversation.input.dock', () =>
     ctx.slots.register(
       {

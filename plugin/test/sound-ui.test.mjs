@@ -6,6 +6,7 @@
  */
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { existsSync } from 'node:fs';
 import { test } from 'node:test';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +21,7 @@ const here = dirname(new URL(import.meta.url).pathname);
  * @returns {any} the module.
  */
 function requireFrom(id) {
-  const anchors = [join(here, '..', 'package.json'), join(here, '..', '..', 'chat-selection', 'package.json')];
+  const anchors = [join(here, '..', 'package.json'), join(here, '..', '..', 'chat-selection', 'package.json'), join(here, '..', '..', '..', 'chat-selection', 'package.json')];
   const errors = [];
   for (const anchor of anchors) {
     try {
@@ -48,7 +49,11 @@ test('sound toggle flips aria-pressed and persists to localStorage', async () =>
     jsx: 'automatic',
     platform: 'browser',
     logLevel: 'silent',
-    nodePaths: [join(here, '..', '..', 'chat-selection', 'node_modules')],
+    nodePaths: [
+      join(here, '..', 'node_modules'),
+      join(here, '..', '..', 'chat-selection', 'node_modules'),
+      join(here, '..', '..', '..', 'chat-selection', 'node_modules'),
+    ].filter((path) => existsSync(path)),
     outfile,
   });
 

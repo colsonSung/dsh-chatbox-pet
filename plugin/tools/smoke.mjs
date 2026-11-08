@@ -51,8 +51,8 @@ function check(label, condition, detail = '') {
 apply(fakeCtx);
 
 check(
-  '46 routes registered (config, state, broadcast, prefs, said, quip, boost, 39 assets)',
-  routes.size === 46,
+  '47 routes registered (config, state, broadcast, prefs, said, quip, merge, boost, 39 assets)',
+  routes.size === 47,
   `got ${routes.size}`,
 );
 
@@ -138,6 +138,24 @@ check('no route for traversal', !routes.has('/api/chatbox-pet/asset/../pokemon-c
     JSON.stringify(body.result?.text ?? null),
   );
   check('quip honours the requested kind', body.result.kind === 'topic', String(body.result.kind));
+}
+
+// merge: the model is absent in a smoke run, so the answer must be the local
+// join of the originals — a merge never fails just because the model is down.
+{
+  const response = await routes
+    .get('/api/chatbox-pet/merge')
+    .fetch(new Request('http://x/api/chatbox-pet/merge', {
+      method: 'POST',
+      body: JSON.stringify({ texts: ['第一条', '第二条'], locale: 'zh' }),
+    }));
+  const body = await response.json();
+  check(
+    'merge 200 with the joined originals',
+    response.status === 200 && body.ok === true && body.result.prompt === '第一条\n\n第二条',
+    JSON.stringify(body.result?.prompt ?? null),
+  );
+  check('merge reports it was not optimised', body.result.optimized === false, String(body.result.reason));
 }
 
 // state: unknown session → idle, never throws.

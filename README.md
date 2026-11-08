@@ -29,6 +29,23 @@ something you wrote down days ago.
 | **Sound that means something** | every state has its own timbre, chosen by the line so the same line always sounds the same; a speaker button mutes it. Web Audio, no asset files |
 | **Two features, one switch each** | the pet and the prompt booster are independent toggles in Settings → Composer companion |
 
+## Merge the queue
+
+While the agent is busy, the messages you send wait in a queue. Two or three
+follow-ups are usually one request — so a chip appears beside the sparkle
+whenever two or more are waiting, and folds them into one:
+
+![two queued messages become one](docs/queue-merge.png)
+
+The merged message is **still queued**, not sent behind your back. The first
+item is edited through the Host's own queue command and the rest are removed,
+so the agent picks up one coherent request instead of running three turns.
+
+The Host reorganises only what you already wrote. If the model is unavailable,
+it simply joins the originals — **your words are never lost because the model
+was down**. If the queue changes while the merge is being prepared, nothing is
+edited and the chip asks you to try again.
+
 ## The small talk
 
 It reads what you wrote and says it back, tagged with where it came from.

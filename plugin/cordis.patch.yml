@@ -1,6 +1,6 @@
 - insert:
     - id: chatbox-pet
-      name: 'dsh-chatbox-pet'
+      name: '@local/chatbox-pet'
       config:
         # Both features start on; the Settings row owns them at runtime
         # (<profile>/chatbox-pet/prefs.json wins over these defaults).
@@ -11,4 +11,5 @@
           # The rewrite follows the user's default model. The composer's Session
           # id travels with the request, which is what lets a provider that
           # routes per conversation (OpenCode) accept the call outside a turn.
-          maxTokens: 3000
+          maxTokens: 1600
+          timeoutMs: 60000

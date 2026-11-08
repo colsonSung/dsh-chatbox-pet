@@ -26,7 +26,7 @@ const here = dirname(fileURLToPath(import.meta.url));
  * @returns {any} the esbuild module.
  */
 function loadEsbuild() {
-  const candidates = [join(here, 'package.json'), join(here, '..', 'chat-selection', 'package.json')];
+  const candidates = [join(here, 'package.json'), join(here, '..', 'chat-selection', 'package.json'), join(here, '..', '..', 'chat-selection', 'package.json')];
   const errors = [];
   for (const anchor of candidates) {
     try {

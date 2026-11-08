@@ -18,6 +18,7 @@ import { createHash } from 'node:crypto';
 
 import { collectContext } from './sources/index.js';
 import { buildSystemPrompt, buildUserPrompt } from './prompt.js';
+import { buildMergeSystemPrompt, buildMergeUserPrompt, sanitizeMerged } from '../merge.js';
 
 const DRAFT_LIMIT = 4000;
 const HINT_LIMIT = 400;
@@ -395,6 +396,78 @@ export async function optimizePrompt(payload, deps = {}) {
 export async function optimizePromptStream(payload, deps = {}, emit = () => {}) {
   requireServices(deps);
   return run(prepare(payload), deps, emit);
+}
+
+/**
+ * Fold several queued messages into one.
+ *
+ * Deliberately NOT cached and NOT single-flighted: the queue is a live thing
+ * (items settle, the reader edits them), and a stale merged answer is worse
+ * than a second model call.
+ *
+ * Never throws for a model problem: the caller (the merge route) has a local
+ * join that keeps every word the reader typed, so a broken model degrades to
+ * "joined" rather than to "cannot merge".
+ * @param {any} payload - `{ texts, locale, sessionId }`.
+ * @param {object} deps - the injected dependencies.
+ * @returns {Promise<{prompt: string, merged: true, optimized: boolean, reason: string}>} the merge.
+ */
+export async function mergeQueuedPrompts(payload, deps = {}) {
+  const texts = Array.isArray(payload?.texts) ? payload.texts.map((text) => String(text ?? '')) : [];
+  const locale = payload?.locale === 'en' ? 'en' : 'zh';
+  const localJoin = texts.map((text) => text.trim()).filter((text) => text !== '').join('\n\n');
+  const fallback = (reason) => ({ prompt: localJoin, merged: true, optimized: false, reason });
+
+  if (texts.length < 2) return fallback('too-few');
+  if (localJoin === '') return fallback('empty');
+
+  let llm;
+  let agentDefaultModel;
+  try {
+    ({ llm, agentDefaultModel } = deps);
+  } catch {
+    return fallback('no-model');
+  }
+  if (llm === undefined || llm === null || typeof llm.prepareCall !== 'function') return fallback('no-model');
+  if (agentDefaultModel === undefined || agentDefaultModel === null || typeof agentDefaultModel.currentSelection !== 'function') {
+    return fallback('no-model');
+  }
+
+  try {
+    const config = deps.config ?? {};
+    const llmConfig = config.llm ?? {};
+    const selection = agentDefaultModel.currentSelection();
+    const provider = text(llmConfig.provider) !== '' ? text(llmConfig.provider) : text(selection?.provider);
+    const model = text(llmConfig.model) !== '' ? text(llmConfig.model) : text(selection?.model);
+    if (provider === '' || model === '') return fallback('no-model');
+
+    const controller = new AbortController();
+    const timeoutMs = Number.isFinite(llmConfig.timeoutMs) && llmConfig.timeoutMs > 0 ? llmConfig.timeoutMs : 30000;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const answer = await complete({
+        llm,
+        provider,
+        model,
+        system: buildMergeSystemPrompt(locale),
+        user: buildMergeUserPrompt(texts),
+        temperature: llmConfig.temperature,
+        // A merge is a reorganisation, not a rewrite: more room only invites
+        // the model to pad. The local join is always available as the floor.
+        maxTokens: Math.min(Number.isFinite(llmConfig.maxTokens) ? llmConfig.maxTokens : 1200, 1200),
+        signal: controller.signal,
+        onDelta: () => {},
+        sessionId: typeof payload?.sessionId === 'string' ? payload.sessionId : undefined,
+      });
+      const prompt = sanitizeMerged(answer);
+      if (prompt === '') return fallback('empty-answer');
+      return { prompt, merged: true, optimized: true, reason: '' };
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch (error) {
+    return fallback(error?.name === 'AbortError' ? 'timeout' : 'model-failed');
+  }
 }
 
 /**

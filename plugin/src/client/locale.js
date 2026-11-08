@@ -28,6 +28,13 @@ export const zh = {
   'menu.quip': '聊点什么',
   'menu.clear': '清空',
   'aria.menu': '打开皮卡丘菜单',
+  'merge.label': (n) => `合并 ${n} 条排队消息`,
+  'merge.running': '正在合并…',
+  'merge.done': (n) => `已把 ${n} 条合并成 1 条`,
+  'merge.donePlain': (n) => `已合并 ${n} 条（未优化）`,
+  'merge.failed': '合并未完成，请检查队列',
+  'merge.changed': '队列已变化，请重新合并',
+  'merge.claimed': '有消息已被智能体取走，请检查队列',
 };
 
 export const en = {
@@ -51,4 +58,11 @@ export const en = {
   'menu.quip': 'Small talk',
   'menu.clear': 'Clear',
   'aria.menu': 'Open the Pikachu menu',
+  'merge.label': (n) => `Merge ${n} queued messages`,
+  'merge.running': 'Merging…',
+  'merge.done': (n) => `Merged ${n} into one`,
+  'merge.donePlain': (n) => `Merged ${n} (not optimised)`,
+  'merge.failed': 'Merge incomplete; check the queue',
+  'merge.changed': 'The queue changed; merge again',
+  'merge.claimed': 'The agent claimed a message; check the queue',
 };

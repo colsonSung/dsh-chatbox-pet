@@ -468,7 +468,7 @@ export function PetDock({ sessionId, t, useInput, locale }) {
   }, []);
 
   return (
-    <div className="cbp-root" data-cbp-root>
+    <div className="cbp-root" data-cbp-root data-cbp-session={sessionId}>
       <div className="cbp-stage">
         <div
           className={

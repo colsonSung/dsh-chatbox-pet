@@ -23,7 +23,7 @@ import { clearSaid, readSaid, rememberLine } from './said.js';
 import { createQuipEngine } from './quip.js';
 import { collectContext } from './boost/sources/index.js';
 import { resolveConfig, serviceOf } from './boost/config.js';
-import { optimizePrompt } from './boost/optimize.js';
+import { mergeQueuedPrompts, optimizePrompt } from './boost/optimize.js';
 
 /** Route base. Never collides with the desktop pet's `/dsh-pet-7340`. */
 export const ROUTE_BASE = '/api/chatbox-pet';
@@ -33,6 +33,7 @@ export const BROADCAST_ROUTE = `${ROUTE_BASE}/broadcast`;
 export const ASSET_ROUTE_BASE = `${ROUTE_BASE}/asset`;
 export const PREFS_ROUTE = `${ROUTE_BASE}/prefs`;
 export const BOOST_ROUTE = `${ROUTE_BASE}/boost`;
+export const MERGE_ROUTE = `${ROUTE_BASE}/merge`;
 export const SAID_ROUTE = `${ROUTE_BASE}/said`;
 export const QUIP_ROUTE = `${ROUTE_BASE}/quip`;
 
@@ -255,6 +256,51 @@ export function registerRoutes(ctx, config) {
             });
           } catch (error) {
             return Response.json(failure('chatbox-pet/quip-failed', messageOf(error)));
+          }
+        },
+      });
+
+      // -------------------------------------------------------------- merge --
+      // Fold the reader's queued messages into one text. The QUEUE itself is
+      // client state (the page calls session.updateQueue), so this route only
+      // answers "what should the merged text be" — and answers it even when the
+      // model is unavailable, by joining the originals untouched.
+      add({
+        path: MERGE_ROUTE,
+        methods: ['POST'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          try {
+            const prefs = await readPrefs(ctx, config);
+            if (!prefs.boost) return disabled('boost');
+            let body;
+            try {
+              body = await request.json();
+            } catch {
+              return Response.json(failure('chatbox-pet/bad-request', 'body is not JSON'), { status: 400 });
+            }
+            const texts = Array.isArray(body?.texts) ? body.texts : [];
+            const deps = {
+              get llm() {
+                return serviceOf(ctx, 'llm');
+              },
+              get agentDefaultModel() {
+                return serviceOf(ctx, 'agentDefaultModel');
+              },
+              config: resolveConfig(ctx, config),
+              signal: undefined,
+            };
+            const result = await mergeQueuedPrompts(
+              {
+                texts,
+                locale: body?.locale === 'en' ? 'en' : 'zh',
+                sessionId: typeof body?.session === 'string' ? body.session : undefined,
+              },
+              deps,
+            );
+            return Response.json({ ok: true, result });
+          } catch (error) {
+            return Response.json(failure('chatbox-pet/merge-failed', messageOf(error)));
           }
         },
       });
