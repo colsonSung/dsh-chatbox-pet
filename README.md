@@ -1,92 +1,51 @@
-# Chatbox Pet for DeepSeek Harness
+# Chatbox Pet
 
-A small companion lives at the top-right corner of the composer. It is idle
-most of the time — it plays a loop and leaves you alone — and it moves only
-when something happens: the agent starts thinking, a tool runs, a step
-finishes, a task succeeds, fails, or gets stopped.
+**A tiny companion for your AI agent, living beside the composer in
+DeepSeek Harness.** It stays out of the way while you work, reacts when the
+agent changes state, answers when you call it, and turns a pile of queued
+follow-ups into one coherent request.
 
-Then it does more than animate. Call it by name and it talks back. Right-click
-it and it will say a line you give it, run one specific animation, or bring up
-something you wrote down days ago.
+[Watch the demo](https://github.com/colsonSung/dsh-chatbox-pet/releases/download/v0.2.0/chatbox-pet-promo.mp4) ·
+[Latest release](https://github.com/colsonSung/dsh-chatbox-pet/releases/tag/v0.2.0) ·
+[中文技术文档](plugin/README.md)
 
-![the pet above the composer, saying what it is doing](docs/composer.png)
+![Chatbox Pet above the composer](docs/composer.png)
 
-> 中文说明：一个挂在输入框右上角的皮卡丘。大部分时间安静地待着，只在 agent
-> 的工作状态变化时动一下；喊它的名字会跟你对话；右键可以让它说指定的话、做指定的
-> 动作，或者从你的记忆/纪要/读书/随手记里挑一件事说给你听。完整的中文技术文档见
-> [`plugin/README.md`](plugin/README.md)。
+> The character in the demo is **local demonstration artwork only**. No
+> character or animation assets are bundled or licensed by this project.
+> Bring or generate your own animation pack. See [Asset rights](#asset-rights).
 
-## What you get
+## What it does
 
-| | |
+| Capability | What you actually get |
 | --- | --- |
-| **Work state, not a screensaver** | six states — thinking, working, step finished, waiting on you, success, error — each with its own clip, its own sound, and one line in a bubble. It speaks only on *transitions*, and repeated polls of the same state change nothing |
-| **Three different endings, three different reactions** | a **finished** task plays the rising arpeggio, a **stopped** one a soft descending pair with a sheepish clip, a **failed** one a low growl with an angry clip. The Harness records all three as the same `turn/end` event, so the outcome is read from `reason.kind` — a stopped task never sounds like a success |
-| **Call it by name** | type `hi pika`, `pika pika`, `皮卡丘`, `电老鼠` or `pika` in the composer — **without sending anything**. It looks up immediately, then answers the content once you pause. `你笨死了` gets the angry clip, `我困了` gets a doze, `皮卡丘你真厉害` gets a cheer |
-| **Make it say anything** | right-click → type a line → it waves and says exactly that. The pet keeps the last 24 lines, so the same line is one click away after a reload, tomorrow, in another session |
-| **Make it do anything** | right-click → 17 one-click actions: wave, cheer, surprise, angry, shy, spin, stretch, read, type, fish, doze, charge, zap, look, march, ride, beach |
-| **It brings things up** | the "small talk" section picks a real thing out of your own stores — memory, meeting minutes, reading shelf, moments — and says it as a topic, a reminder, a recollection, a nudge, encouragement, a tease or chit-chat, with a tag saying which store it came from |
-| **Sound that means something** | every state has its own timbre, chosen by the line so the same line always sounds the same; a speaker button mutes it. Web Audio, no asset files |
-| **Two features, one switch each** | the pet and the prompt booster are independent toggles in Settings → Composer companion |
-
-## Merge the queue
-
-While the agent is busy, the messages you send wait in a queue. Two or three
-follow-ups are usually one request — so a chip appears beside the sparkle
-whenever two or more are waiting, and folds them into one:
-
-![two queued messages become one](docs/queue-merge.png)
-
-The merged message is **still queued**, not sent behind your back. The first
-item is edited through the Host's own queue command and the rest are removed,
-so the agent picks up one coherent request instead of running three turns.
-
-The Host reorganises only what you already wrote. If the model is unavailable,
-it simply joins the originals — **your words are never lost because the model
-was down**. If the queue changes while the merge is being prepared, nothing is
-edited and the chip asks you to try again.
-
-## The small talk
-
-It reads what you wrote and says it back, tagged with where it came from.
-
-![the pet quoting a note from memory](docs/small-talk.png)
-
-A line is **local templates, not a model call**: a companion that takes twenty
-seconds to answer is a bug, not a companion. The Host picks a real item, takes
-its heading or title as the quote (never the first twenty characters of a body
-— a truncated date says nothing), and the page renders one of several
-phrasings. Every grounded line shows its quote; the phrasings that could not
-are filtered out at render time.
-
-## The menu
-
-Right-click the pet, or focus it and press Shift+F10.
-
-![the context menu: say a line, the lines it said before, small talk, actions](docs/menu.png)
-
-The 17 actions are the animation pack's own clips, played once and back to the
-idle loop — including two ambient ones, a motorcycle ride and a beach holiday:
-
-![the pet riding a motorcycle](docs/riding.png)
+| **Work-state companion** | The pet reacts to thinking, working, step completion, waiting for you, success, failure and cancellation. Each transition has its own clip, sound and one-line bubble. Repeated polls of the same state stay quiet. |
+| **Conversation mode** | Type `hi pika`, `pika pika`, `皮卡丘`, `电老鼠` or `pika` in the composer. It looks up immediately, then answers after a typing pause. **No message is sent.** |
+| **Prompt Boost** | A sparkle button turns a rough draft into an executable prompt, using your configured model and optional personal context. It auto-applies, supports undo, and never sends the result for you. |
+| **Queue merge** | When 2–8 text-only messages are waiting, one chip folds them into a single coherent request. The result stays queued until the agent claims it. |
+| **Small talk from your own notes** | Seven tones — topic, reminder, recall, nudge, encouragement, tease and chit-chat — quoting your memory, meeting minutes, reading shelf or moments, with the source named. |
+| **Direct manipulation** | Right-click the pet to make it say an exact line, replay one of its remembered lines, or run one of 17 actions. The last 24 lines survive reloads and session switches. |
+| **Deliberate sound** | A finished task, a stopped task and a failed task sound different. The sound is generated with Web Audio; a speaker button mutes it. |
+| **Independent switches** | Pet and Prompt Boost can be enabled separately in Settings → Composer companion. |
 
 ## Install
+
+You need a DeepSeek Harness profile and your own animation assets.
 
 ```bash
 git clone https://github.com/colsonSung/dsh-chatbox-pet.git
 cd dsh-chatbox-pet
-./install.sh desktop        # your profile name
+./install.sh <profile>       # for example: ./install.sh desktop
 ```
 
-`install.sh` takes an optional profile name and is idempotent. It installs the
-package into the profile and adds the bundle row to
-`<profile>/cordis.patch.yml`. **Restart the Harness afterwards** — the host
-half of a plugin is loaded at start-up.
+The installer is idempotent: it adds the package to the profile and inserts
+the bundle row into `<profile>/cordis.patch.yml`. **Restart the Harness
+afterwards**, because the host half is loaded at start-up.
 
 Manual equivalent:
 
 ```bash
-dsh plugin --profile desktop add ./plugin
+dsh plugin --profile <profile> add ./plugin
 ```
 
 ```yaml
@@ -96,62 +55,175 @@ dsh plugin --profile desktop add ./plugin
       name: 'dsh-chatbox-pet'
 ```
 
-## Bring your own animation pack
+After the restart, open a session and look at the composer's top-right corner.
+Type a wake word to talk to the pet, or right-click it for the menu.
 
-The plugin ships **no artwork and no character assets**. The Pikachu shown in
-the screenshots and video is a **local demonstration only**: it is not bundled,
-not licensed by this project, and not offered for redistribution.
+## A tour of the interactions
 
-You must generate or provide your own character and animation assets. Do not
-reuse the demo's character pack in a distributed product. **MIT covers the
-plugin's code only**, not any character, artwork, font or music.
+### The agent's work has a visible rhythm
+
+| State | Clip | Sound |
+| --- | --- | --- |
+| Thinking | Typing | A soft high note |
+| Working | Reading | A mechanical double-tap |
+| A step finished | Spin | A bright bell pair |
+| Waiting for you | Shy | Two low pulses |
+| Completed | Thunderbolt | A rising arpeggio |
+| Stopped / interrupted | Shy | A soft descending pair |
+| Failed | Angry | A low detuned growl |
+
+The Harness records every ending as `turn/end`; the plugin reads
+`data.reason.kind` so a stopped task is never announced as a success. If the
+reason cannot be read, it is unknown rather than assumed completed.
+
+### Call it by name
+
+The wake word is read from the composer's own draft state. The pet reacts
+instantly, then answers the content once you stop typing for about 700 ms. It
+replies in the language you used, and conversation mode returns to idle after
+15 seconds of quiet or when the draft is cleared.
+
+Greeting, praise, thanks, scolding, goodbye, food, play, status, questions and
+sleep each map to their own clip and sound. The lines are a local, deterministic
+pool: no model latency and no model cost.
+
+### Turn a rough draft into an executable prompt
+
+Click the sparkle beside the composer. Prompt Boost gathers optional context
+from your memory, meeting minutes, reading shelf and moments, asks your
+configured model for a better prompt, and applies it in place. You can review
+the rewrite and undo it.
+
+The draft is **not** sent as a user message. If no model is available, the
+feature reports that clearly instead of pretending it rewrote anything.
+
+### Merge queued follow-ups
+
+While the agent is busy, several short messages are often one request typed in
+a hurry. The merge chip appears only when there are 2–8 text-only messages to
+fold.
+
+![Two queued messages become one](docs/queue-merge.png)
+
+The first queued item is edited to the merged text and the rest are removed
+through the Host's own `session.updateQueue` command path. The queue is not
+bypassed: the result waits there normally.
+
+- The model only reorganises what you already wrote; it must not invent a
+  requirement.
+- If the model is unavailable, the originals are joined and marked
+  **not optimised**.
+- If the queue changes while the answer is being prepared, nothing is edited.
+- If the agent claims an item mid-merge, the partial result is reported.
+- Attachments refuse the merge, because a text-only edit cannot preserve them.
+
+### Let it bring something up
+
+The menu's small-talk section picks a real item from your stores and quotes its
+heading or title, not an arbitrary fragment. It prefers the store that matches
+the tone — reminders lean on meeting minutes, recollections lean on memory —
+and tags the bubble with its source.
+
+![Small talk quoting a note from memory](docs/small-talk.png)
+
+The wording is local templates, not another model call. Grounded lines always
+show their quote, and an empty store falls back to an honest generic line.
+
+### Say exactly what you want, or play exactly one action
+
+Right-click the pet, or focus it and press Shift+F10. The menu lets you:
+
+- type a line and make the pet say it;
+- replay a line it said before;
+- choose a small-talk tone;
+- play one of 17 actions, including a motorcycle ride and a beach holiday.
+
+![The context menu](docs/menu.png)
+
+![The motorcycle action](docs/riding.png)
+
+## Asset rights
+
+**The repository and its releases ship no character or animation assets.**
+
+Pikachu appears only as local demonstration artwork. It is not bundled, not
+licensed by this project, and not offered as an asset pack. No affiliation or
+endorsement is implied.
+
+You must generate or provide your own character and animation assets, and you
+are responsible for having the rights to use them. Do not redistribute the
+demo's character pack in your own product. **MIT covers this plugin's code
+only**, not characters, artwork, fonts or music.
 
 The plugin reads a local pack from `~/.dsh/dsh-pet/pet/`:
 
-- `pokemon-animation/<action>.webm` — VP9-alpha, for Chromium/Firefox;
-- `pokemon-animation/mov/<action>.mov` — HEVC-alpha, for WebKit;
-- `pokemon-avatar.png` — the static fallback.
+```text
+pokemon-animation/<action>.webm        # VP9-alpha, Chromium / Firefox
+pokemon-animation/mov/<action>.mov     # HEVC-alpha, WebKit
+pokemon-avatar.png                    # static fallback
+```
 
-The filenames are the animation names. The animation pack is a local asset
-boundary, not a download bundled with this repository. See
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+The filename is the animation name. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the full notice.
 
-## How it talks to the Harness
+## Data and privacy
 
-Everything runs in the page or in the Host; nothing leaves your machine, and
-no message is ever sent on your behalf.
-
-- The pet renders from the `conversation.input.dock` slot of the session's own
-  composer, so it exists exactly where a session does.
-- State polling hits `GET /api/chatbox-pet/state?session=<id>` every six
-  seconds while the tab is visible, and stops when it is hidden.
-- Conversation mode reads the composer's draft through the conversation
-  plugin's own `useInput` selector. The wake word never sends, never creates a
-  session, and never makes a request.
-- Small talk reuses the prompt booster's four store collectors, each behind its
-  own timeout, so a dead store costs nothing and never throws.
-- Assets answer `cache-control: no-cache` + a content `ETag`, because the clips
-  are regenerated in place by the animation pipeline: a long-lived cache would
-  keep playing the old clip after a rebuild.
-
-The exact contract — statuses, routes, payloads, test hooks, the intent table,
-the memory file — is in [`plugin/README.md`](plugin/README.md).
+- The pet, its state polling, preferences and remembered lines are local.
+- Conversation mode reads the draft without sending it, creating a session or
+  making a request.
+- Small talk uses local templates and the local store collectors; it does not
+  call a model for wording.
+- Prompt Boost and queue merge call the model **only after you click**, through
+  the Host's configured provider. They do not send a user message or start an
+  agent turn.
+- State polling pauses when the tab is hidden. Assets revalidate with a content
+  ETag instead of being cached forever, because animation packs are regenerated
+  in place.
 
 ## Development
 
 ```bash
 cd plugin
-node build.mjs          # rebuild client.js from src/client/**
-node --test test/*.test.mjs
-node tools/smoke.mjs    # route registration and handler behaviour
+npm install                 # development and test dependencies only
+node build.mjs              # rebuild client.js from src/client/**
+node --test test/*.test.mjs # 160 unit tests
+node tools/smoke.mjs        # route registration and handler behaviour
 ```
 
-The client bundle is built by esbuild; `client.js` is committed so an install
-needs no build step.
+The committed `client.js` means installing the plugin needs no build step.
+React stays external in the browser bundle; esbuild resolves from the plugin's
+own dependencies, with a workspace fallback for development.
+
+Verified for v0.2.0: **160 unit tests**, route smoke, and **nine live browser
+suites / 124 checks**, including a real two-message queue merge.
+
+## Repository layout
+
+```text
+install.sh                 idempotent profile installer
+docs/                      screenshots used by this README
+plugin/
+  index.js                 Host entry
+  client.js                committed browser bundle
+  src/host/                routes, state, memory, merge and prompt boost
+  src/client/              composer seats, pet, menu, sounds and stores
+  test/                    unit and component tests
+  tools/                   smoke and development tools
+  README.md                中文技术文档与接口契约
+```
+
+## Current limits
+
+- No character pack is included; you supply the artwork.
+- Queue merge accepts 2–8 text-only messages. Attachments are not folded.
+- Small talk is intentionally local and templated, not a free-form model chat.
+- The pet exists where the session composer exists; it is not a separate
+  desktop window.
+- Browser autoplay policy applies: sound unlocks after the first user gesture.
 
 ## License
 
 MIT, Ethan Song. See [LICENSE](LICENSE).
 
-The DeepSeek Harness, and the character artwork in the animation pack, belong
-to their own owners.
+DeepSeek Harness, third-party libraries and any character artwork belong to
+their respective owners.
