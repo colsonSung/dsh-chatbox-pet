@@ -82,10 +82,9 @@ installed
   package  $PACKAGE
   patch    $PATCH_FILE
 
-The pet draws from the animation pack of the desktop pet (dsh-pet). Install
-it first if the pet shows only the still avatar:
-
-  https://github.com/colsonSung/dsh-pet
+No character artwork is bundled. The Pikachu in the demo is a local-only
+placeholder and is not redistributed or licensed. Generate or provide your own
+animation pack at ~/.dsh/dsh-pet/pet/ before using the pet.
 
 Next: restart the DeepSeek Harness. A Pikachu appears at the top-right of the
 composer in every session.

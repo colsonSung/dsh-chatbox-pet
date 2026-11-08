@@ -96,17 +96,25 @@ dsh plugin --profile desktop add ./plugin
       name: 'dsh-chatbox-pet'
 ```
 
-## It needs an animation pack
+## Bring your own animation pack
 
-The plugin ships **no artwork**. It reads the pack that the desktop pet
-[`dsh-pet`](https://github.com/colsonSung/dsh-pet) installs into
-`~/.dsh/dsh-pet/pet/`: the alpha-transparent clips, the avatar and the bubble
-lines. Install `dsh-pet` first.
+The plugin ships **no artwork and no character assets**. The Pikachu shown in
+the screenshots and video is a **local demonstration only**: it is not bundled,
+not licensed by this project, and not offered for redistribution.
 
-Without a pack the pet still mounts and still runs, and every asset request
-404s, so it shows nothing rather than a black rectangle. The clips are
-third-party character artwork and stay with the desktop pet — they are not
-redistributed here.
+You must generate or provide your own character and animation assets. Do not
+reuse the demo's character pack in a distributed product. **MIT covers the
+plugin's code only**, not any character, artwork, font or music.
+
+The plugin reads a local pack from `~/.dsh/dsh-pet/pet/`:
+
+- `pokemon-animation/<action>.webm` — VP9-alpha, for Chromium/Firefox;
+- `pokemon-animation/mov/<action>.mov` — HEVC-alpha, for WebKit;
+- `pokemon-avatar.png` — the static fallback.
+
+The filenames are the animation names. The animation pack is a local asset
+boundary, not a download bundled with this repository. See
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## How it talks to the Harness
 
