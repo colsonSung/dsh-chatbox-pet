@@ -9,7 +9,7 @@ follow-ups into one coherent request.
 [Latest release](https://github.com/colsonSung/dsh-chatbox-pet/releases/tag/v0.2.0) ·
 [中文技术文档](plugin/README.md)
 
-![Chatbox Pet above the composer](docs/composer.png)
+[![Chatbox Pet above the composer](docs/composer.png)](https://github.com/colsonSung/dsh-chatbox-pet/releases/download/v0.2.0/chatbox-pet-promo.mp4)
 
 > The character in the demo is **local demonstration artwork only**. No
 > character or animation assets are bundled or licensed by this project.
