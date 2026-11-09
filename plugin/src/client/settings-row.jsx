@@ -1,10 +1,14 @@
 /**
- * The one settings row this bundle contributes: two independent switches.
+ * The one settings row this bundle contributes: three independent switches.
  *
  * Both features live in one bundle, so the row is the only place a reader can
- * turn one off without the other. Each switch is a native checkbox driven by
- * the shared prefs store, so it is keyboard operable and announced by the
- * screen reader for free; the visual switch is drawn in CSS from that input.
+ * turn one off without the other. The first switch is the pet's display
+ * switch — off means the whole pet (dock, bubbles, chat, small talk) is gone
+ * while boost, queue-merge and sound keep working; it is labelled "Show pet"
+ * rather than with the character's name so it reads as a display control, not
+ * as a feature switch. Each switch is a native checkbox driven by the shared
+ * prefs store, so it is keyboard operable and announced by the screen reader
+ * for free; the visual switch is drawn in CSS from that input.
  */
 import * as React from 'react';
 import { useSyncExternalStore } from 'react';

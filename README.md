@@ -5,11 +5,11 @@ DeepSeek Harness.** It stays out of the way while you work, reacts when the
 agent changes state, answers when you call it, and turns a pile of queued
 follow-ups into one coherent request.
 
-[Watch the demo](https://github.com/colsonSung/dsh-chatbox-pet/releases/download/v0.2.0/chatbox-pet-promo.mp4) ·
-[Latest release](https://github.com/colsonSung/dsh-chatbox-pet/releases/tag/v0.2.0) ·
+[Watch the demo](https://github.com/colsonSung/dsh-chatbox-pet/releases/download/v0.2.1/chatbox-pet-promo.mp4) ·
+[Latest release](https://github.com/colsonSung/dsh-chatbox-pet/releases/tag/v0.2.1) ·
 [中文技术文档](plugin/README.md)
 
-[![Chatbox Pet above the composer](docs/composer.png)](https://github.com/colsonSung/dsh-chatbox-pet/releases/download/v0.2.0/chatbox-pet-promo.mp4)
+[![Chatbox Pet above the composer](docs/composer.png)](https://github.com/colsonSung/dsh-chatbox-pet/releases/download/v0.2.1/chatbox-pet-promo.mp4)
 
 > The character in the demo is **local demonstration artwork only**. No
 > character or animation assets are bundled or licensed by this project.
@@ -26,7 +26,7 @@ follow-ups into one coherent request.
 | **Small talk from your own notes** | Seven tones — topic, reminder, recall, nudge, encouragement, tease and chit-chat — quoting your memory, meeting minutes, reading shelf or moments, with the source named. |
 | **Direct manipulation** | Right-click the pet to make it say an exact line, replay one of its remembered lines, or run one of 17 actions. The last 24 lines survive reloads and session switches. |
 | **Deliberate sound** | A finished task, a stopped task and a failed task sound different. The sound is generated with Web Audio; a speaker button mutes it. |
-| **Independent switches** | Pet and Prompt Boost can be enabled separately in Settings → Composer companion. |
+| **Independent switches** | The pet, Prompt Boost and sound are switched separately in Settings → Composer companion. The first switch is labelled **Show pet**: turning it off hides Pikachu and nothing else — boost, queue merge and sound keep working. |
 
 ## Install
 
@@ -186,7 +186,7 @@ The filename is the animation name. See
 cd plugin
 npm install                 # development and test dependencies only
 node build.mjs              # rebuild client.js from src/client/**
-node --test test/*.test.mjs # 160 unit tests
+node --test test/*.test.mjs # 166 unit tests
 node tools/smoke.mjs        # route registration and handler behaviour
 ```
 
@@ -194,8 +194,11 @@ The committed `client.js` means installing the plugin needs no build step.
 React stays external in the browser bundle; esbuild resolves from the plugin's
 own dependencies, with a workspace fallback for development.
 
-Verified for v0.2.0: **160 unit tests**, route smoke, and **nine live browser
-suites / 124 checks**, including a real two-message queue merge.
+Verified for v0.2.1: **166 unit tests**, route smoke, and **nine live browser
+suites / 124 checks**, including a real two-message queue merge. The settings
+row was additionally verified in the running app: switching **Show pet** off
+removes the pet, keeps the prompt-boost trigger and the sound switch working,
+and writes only `pet` to the prefs file.
 
 ## Repository layout
 
