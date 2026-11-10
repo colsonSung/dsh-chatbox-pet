@@ -1,9 +1,9 @@
 {
-  "name": "@local/chatbox-pet",
-  "version": "0.3.1",
+  "name": "dsh-chatbox-pet",
+  "version": "0.3.2",
   "private": true,
   "type": "module",
-  "description": "A Pikachu companion pinned to the session composer's top-right: idle most of the time, animates and speaks a bubble when the agent's work state changes.",
+  "description": "A Pikachu companion pinned to the DeepSeek Harness composer: idle most of the time, it reacts to the agent's work state, talks back when you call it, and brings up things you wrote down.",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -20,7 +20,8 @@
   ],
   "scripts": {
     "build": "node build.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "smoke": "node tools/smoke.mjs"
   },
   "dsh": {
     "bundle": {
@@ -35,5 +36,11 @@
         "@deepseek-ai/dsh-client-ui-primitives"
       ]
     }
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "jsdom": "^30.1.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }
