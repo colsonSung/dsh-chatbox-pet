@@ -11,6 +11,22 @@
 
 ---
 
+## 视频理解（第三个功能）
+
+同一个 bundle 还注册一个宿主工具 `video_read`：把上传的视频文件或 YouTube / X /
+Bilibili / TikTok / 抖音 / Vimeo 链接变成模型能引用的证据——元数据、带时间码与
+说话人标签的逐段转写、画面烧录字幕（OCR）、关键帧图片。
+
+- 全本机：faster-whisper 转写、sherpa-onnx 说话人分离（模型用
+  `tools/fetch-models.sh` 下载，约 45 MB）、macOS Vision 做字幕 OCR；
+  不上传音频/图片，不调云端 ASR/OCR。
+- 微信视频号/公众号视频明确拒绝（`unsupported-platform`），给导出/录屏的替代做法。
+- 缺依赖逐项降级，并在 `warnings` 里写清原因与补装命令。
+- 配置在 patch 的 `video` 命名空间，与 pet / boost / sound 互不影响；
+  工作目录 `~/.dsh/video-lens/`，自动清理只碰 16 位哈希目录。
+
+---
+
 ## 界面位置
 
 | 位置 | 内容 |

@@ -7,6 +7,15 @@
         pet: true
         boost: true
         sound: true
+        # 第三个功能：视频理解（工具 video_read），配置放在 video 命名空间。
+        video:
+          whisperModel: mobiuslabsgmbh/faster-whisper-large-v3-turbo
+          diarize: true
+          ocr: subtitles
+          frames: 8
+          maxSeconds: 1800
+          maxMegabytes: 500
+          proxy: ''
         llm:
           # The rewrite follows the user's default model. The composer's Session
           # id travels with the request, which is what lets a provider that

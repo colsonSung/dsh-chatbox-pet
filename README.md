@@ -72,6 +72,7 @@ writes only `pet` to the prefs file; the other two switches keep their state.
 | **Queue merge** | While the agent is busy, one chip folds 2–8 queued text messages into a single coherent request. The result stays queued. |
 | **Small talk from your own notes** | Seven tones quoting your memory, meeting minutes, reading shelf or moments, with the source named. Local templates, no model call. |
 | **Direct manipulation** | Right-click to make it say an exact line, replay a line it remembers, or play one of 17 actions. |
+| **Video reading** | A host tool — `video_read` — turns a video file or a link into a timestamped transcript with speaker labels, OCR'd on-screen subtitles and keyframes. Local only; see [Video reading](#video-reading). |
 
 ## Using it
 
@@ -141,6 +142,30 @@ line and make the pet say it, replay a line it said before, choose a small-talk
 tone, or play one of 17 actions.
 
 ![The motorcycle action](docs/riding.png)
+
+## Video reading
+
+The same bundle registers a host tool, **`video_read`**. Hand the model a video
+file (drag it into the composer — the Harness gives the model a read-only path)
+or a link, and it gets back:
+
+| | |
+| --- | --- |
+| `media` | duration, resolution, fps, codecs, size |
+| `transcript` | timestamped segments with `speaker` labels, plus a full timestamped text |
+| `diarization` | how many people were detected (0/1 = one speaker or no speech) |
+| `subtitles` | on-screen text read off the bottom of the frame, de-duplicated into timed lines |
+| `frames` | keyframe PNGs the model can open with its image tool |
+
+Everything runs locally: faster-whisper for transcription, sherpa-onnx for
+speaker diarization, macOS Vision for OCR, yt-dlp for fetching links. No audio,
+frame or transcript leaves the machine. WeChat Channels links are refused with
+an explanation and a workaround instead of being faked.
+
+Dependencies are optional and degrade one at a time: without `faster-whisper`
+you still get metadata and keyframes; without `sherpa-onnx` the transcript just
+has no speaker labels; without Vision (non-macOS) there are no subtitle lines.
+Each gap is reported in `warnings`.
 
 ## Asset rights
 
