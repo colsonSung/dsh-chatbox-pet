@@ -88,9 +88,29 @@ test('译文里的英文单词可点，点开后出词卡并能返回', async ()
   click(document.querySelector('[data-cbt-translate]'));
   await flush();
   await flush();
-  const words = document.querySelectorAll('[data-cbt-word]');
-  assert.ok(words.length >= 3, 'each latin word is a button');
+  const words = [...document.querySelectorAll('[data-cbt-word]')].map((node) => node.textContent);
+  assert.ok(words.includes('milestone'), 'content words are buttons');
+  assert.ok(!words.includes('is'), 'stop words stay plain text');
   assert.equal(document.querySelector('[data-cbt-back]'), null, 'no back button before a lookup');
+  root.unmount();
+});
+
+test('中文译文按词切分，每个实词可点', async () => {
+  const { root } = await mount({
+    ...SENTENCE,
+    '/api/chatbox-pet/translate': {
+      ok: true,
+      result: { translated: '上周，该项目达到了一个重要的里程碑。', from: 'en', to: 'zh', engine: 'local', ms: 300 },
+    },
+  });
+  type(document.querySelector('[data-cbt-source]'), 'The project reached a milestone last week.');
+  click(document.querySelector('[data-cbt-translate]'));
+  await flush();
+  await flush();
+  const words = [...document.querySelectorAll('[data-cbt-result-text] [data-cbt-word]')].map((node) => node.textContent);
+  assert.ok(words.includes('里程碑'), 'a Chinese content word is clickable');
+  assert.ok(words.includes('项目'), 'Chinese words are segmented, not single characters');
+  assert.ok(!words.includes('的'), 'Chinese function words stay plain text');
   root.unmount();
 });
 

@@ -219,6 +219,11 @@ vendor, no extra key; it uses the model you already configured.
 | Voice | Record → transcribed on this machine → the text lands in the input |
 | File | PDF / DOCX / TXT / Markdown / HTML parsed locally, then translated as one document (30 MB / 60k chars cap) |
 
+Saved words can be reviewed: the bookmark book opens a card review (word on the
+front, meaning on the back, grade Again / Hard / Good) scheduled with a
+simplified SM-2. Pronunciation prefers the studio voice of the local Kokoro
+model (`af_heart` / `bf_emma`) and falls back to the system voice.
+
 Engines, in order: your **local translation model** (LM Studio or any
 OpenAI-compatible endpoint — `hy-mt2-7b` on `127.0.0.1:6121` by default, about
 0.5 s per sentence), then the Host model when the local server is not running.

@@ -59,6 +59,13 @@ function escapeRegExp(value) {
  * @param {string} [word] - the headword to mark, if any.
  * @returns {Array} React children.
  */
+/** Chinese function words: segmenting splits them out, nobody looks them up. */
+const PLAIN_CJK = new Set([
+  '的', '了', '是', '在', '和', '与', '也', '就', '都', '而', '及', '其', '之', '着', '过',
+  '把', '被', '让', '给', '对', '从', '到', '很', '更', '最', '不', '没', '有', '上', '下',
+  '个', '这', '那', '我', '你', '他', '她', '它', '们', '去', '来', '会', '能', '要',
+]);
+
 /** Words a reader would never look up; they stay plain text. */
 const PLAIN_WORDS = new Set([
   'the', 'a', 'an', 'and', 'or', 'but', 'if', 'to', 'of', 'in', 'on', 'at', 'for', 'with', 'by',
@@ -127,26 +134,39 @@ export function renderLinked(text, onPick, word = '') {
  */
 export function tokenizeForLookup(text, onPick) {
   const source = String(text ?? '');
+  if (source === '') return [source];
+
+  // Intl.Segmenter segments Chinese into words ("这个/项目/达到/了/一个/重要/里程碑")
+  // and latin text into words too, so one path serves both directions.
+  let segmenter = null;
+  try {
+    segmenter = new Intl.Segmenter(undefined, { granularity: 'word' });
+  } catch {
+    segmenter = null;
+  }
+  if (segmenter === null) return [source];
+
   const out = [];
-  let last = 0;
-  for (const match of source.matchAll(/[A-Za-z][A-Za-z'’-]{1,24}/g)) {
-    const at = match.index ?? 0;
-    if (at > last) out.push(source.slice(last, at));
-    const word = match[0].replace(/['’-]+$/, '');
+  let index = 0;
+  for (const part of segmenter.segment(source)) {
+    const piece = part.segment;
+    if (!part.isWordLike || PLAIN_WORDS.has(piece.toLowerCase()) || PLAIN_CJK.has(piece)) {
+      out.push(piece);
+      continue;
+    }
+    index += 1;
     out.push(
       <button
         type="button"
         className="cbt-word"
-        data-cbt-word={word}
-        key={`${at}-${word}`}
-        onClick={() => onPick(word)}
+        data-cbt-word={piece}
+        key={`${part.index}-${index}`}
+        onClick={() => onPick(piece)}
       >
-        {match[0]}
+        {piece}
       </button>,
     );
-    last = at + match[0].length;
   }
-  if (last < source.length) out.push(source.slice(last));
   return out.length === 0 ? [source] : out;
 }
 
@@ -206,6 +226,9 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
   const [recording, setRecording] = React.useState(false);
   const [seconds, setSeconds] = React.useState(0);
   const [items, setItems] = React.useState([]);
+  // The review session: the due cards, the cursor, and whether the answer shows.
+  const [review, setReview] = React.useState(null);
+  const [counts, setCounts] = React.useState({ due: 0, total: 0, newCards: 0 });
   const [kind, setKind] = React.useState('all');
   const [search, setSearch] = React.useState('');
   const [saved, setSaved] = React.useState(false);
@@ -228,6 +251,7 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
       if (searchText.trim() !== '') query.set('search', searchText.trim());
       const result = await call(`/favorites?${query.toString()}`);
       setItems(result.items ?? []);
+      if (result.counts) setCounts(result.counts);
     } catch (failure) {
       setError(String(failure?.message ?? failure));
     }
@@ -551,6 +575,54 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
     }
   };
 
+  /**
+   * Open a review session with the cards that are due now.
+   * @returns {Promise<void>} resolves when the session starts.
+   */
+  const startReview = async () => {
+    setError('');
+    try {
+      const result = await call('/favorites?due=1&limit=30');
+      const cards = result.items ?? [];
+      if (cards.length === 0) {
+        setReview({ cards: [], index: 0, revealed: false, done: true });
+        return;
+      }
+      setReview({ cards, index: 0, revealed: false, done: false });
+    } catch (failure) {
+      setError(String(failure?.message ?? failure));
+    }
+  };
+
+  /**
+   * Grade the current card and advance.
+   * @param {string} grade - again | hard | good | easy.
+   * @returns {Promise<void>} resolves when the next card is shown.
+   */
+  const gradeCurrent = async (grade) => {
+    if (review === null) return;
+    const card = review.cards[review.index];
+    if (card === undefined) return;
+    try {
+      await call('/favorites', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'grade', id: card.id, grade }),
+      });
+    } catch (failure) {
+      setError(String(failure?.message ?? failure));
+    }
+    // "again" keeps the card at the end of this session: it is not learned yet.
+    const cards = grade === 'again' ? [...review.cards, card] : review.cards;
+    const next = review.index + 1;
+    if (next >= cards.length) {
+      setReview({ cards, index: next, revealed: false, done: true });
+      await loadFavorites();
+      return;
+    }
+    setReview({ cards, index: next, revealed: false, done: false });
+  };
+
   const remove = async (id) => {
     try {
       await call('/favorites', {
@@ -578,6 +650,7 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
         {[
           ['translate', L('翻译', 'Translate')],
           ['favorites', L('收藏本', 'Saved')],
+          ['review', L('复习', 'Review')],
         ].map(([id, label]) => (
           <button
             key={id}
@@ -585,11 +658,22 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
             role="tab"
             className="cbt-viewtab"
             data-cbt-view={id}
-            aria-selected={view === id ? 'true' : 'false'}
-            onClick={() => setView(id)}
+            aria-selected={id === 'review' ? (review !== null ? 'true' : 'false') : view === id ? 'true' : 'false'}
+            onClick={() => {
+              if (id === 'review') {
+                // The review view is a branch of the saved view: switching the
+                // tab first keeps the render chain below consistent.
+                setView('favorites');
+                void startReview();
+                return;
+              }
+              setReview(null);
+              setView(id);
+            }}
           >
             {label}
-            {id === 'favorites' && items.length > 0 ? ` · ${items.length}` : ''}
+            {id === 'favorites' && (counts.total || items.length) > 0 ? ` · ${counts.total || items.length}` : ''}
+            {id === 'review' && counts.due > 0 ? ` · ${counts.due}` : ''}
           </button>
         ))}
       </div>
@@ -910,6 +994,82 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
 
           {error !== '' ? <p className="cbt-error" data-cbt-error="true">{error}</p> : null}
         </>
+      ) : review !== null ? (
+        <div className="cbt-review" data-cbt-review="true">
+          {review.done ? (
+            <div className="cbt-review-done">
+              <div className="cbt-review-title">{L('今日复习完成', 'Review done for today')}</div>
+              <p className="cbt-review-hint">
+                {L('卡片会按间隔自动安排下一次复习。', 'Cards are scheduled automatically for their next review.')}
+              </p>
+              <button
+                type="button"
+                className="cbt-primary"
+                data-cbt-review-exit="true"
+                onClick={() => {
+                  setReview(null);
+                  void loadFavorites();
+                }}
+              >
+                {L('回到收藏本', 'Back to saved')}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="cbt-review-head">
+                <span className="cbt-review-progress" data-cbt-review-progress="true">
+                  {review.index + 1} / {review.cards.length}
+                </span>
+                <button
+                  type="button"
+                  className="cbt-link"
+                  onClick={() => {
+                    setReview(null);
+                    void loadFavorites();
+                  }}
+                >
+                  {L('结束', 'End')}
+                </button>
+              </div>
+              <div className="cbt-review-card" data-cbt-review-card="true">
+                <div className="cbt-review-word">{review.cards[review.index]?.source}</div>
+                {review.revealed ? (
+                  <div className="cbt-review-answer" data-cbt-review-answer="true">
+                    {review.cards[review.index]?.target}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="cbt-primary"
+                    data-cbt-reveal="true"
+                    onClick={() => setReview({ ...review, revealed: true })}
+                  >
+                    {L('显示答案', 'Show answer')}
+                  </button>
+                )}
+              </div>
+              {review.revealed ? (
+                <div className="cbt-review-grades">
+                  {[
+                    ['again', L('不会', 'Again')],
+                    ['hard', L('模糊', 'Hard')],
+                    ['good', L('会了', 'Good')],
+                  ].map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className="cbt-grade"
+                      data-cbt-grade={id}
+                      onClick={() => void gradeCurrent(id)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
       ) : (
         <>
           <div className="cbt-bar">
@@ -1013,6 +1173,35 @@ export const TRANSLATE_CSS = `
 .cbt-pick:hover{background:color-mix(in oklab,#635BFF 26%,var(--dsw-alias-bg-overlay,#fff))}
 .cbt-error{margin:0;color:#e5484d;font-size:11.5px;line-height:1.5}
 .cbt-engine{margin-top:-4px;color:var(--dsw-alias-label-tertiary);font-size:10.5px;line-height:1.5}
+.cbt-review{display:flex;flex-direction:column;gap:12px;padding:4px 0}
+.cbt-review-head{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--dsw-alias-label-tertiary)}
+.cbt-review-progress{font-variant-numeric:tabular-nums}
+.cbt-review-card{
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  padding:26px 18px;border-radius:14px;
+  border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 9%,transparent);
+  background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#fff) 40%,transparent);
+  text-align:center;
+}
+.cbt-review-word{font-size:26px;font-weight:600;letter-spacing:-0.01em;line-height:1.3}
+.cbt-review-answer{font-size:14px;line-height:1.7;color:var(--dsw-alias-label-secondary);white-space:pre-wrap}
+.cbt-review-grades{display:flex;gap:8px}
+.cbt-grade{
+  flex:1;height:34px;border-radius:10px;cursor:pointer;font-size:12.5px;
+  border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 12%,transparent);
+  background:color-mix(in oklab,var(--dsw-alias-label-primary) 4%,transparent);
+  color:var(--dsw-alias-label-primary);
+}
+.cbt-grade:hover{background:color-mix(in oklab,#635BFF 14%,transparent);border-color:color-mix(in oklab,#635BFF 40%,transparent)}
+.cbt-grade[data-cbt-grade="good"]{background:color-mix(in oklab,#635BFF 16%,transparent);border-color:color-mix(in oklab,#635BFF 42%,transparent)}
+.cbt-review-done{display:flex;flex-direction:column;align-items:center;gap:10px;padding:26px 16px;text-align:center}
+.cbt-review-title{font-size:15px;font-weight:600}
+.cbt-review-hint{margin:0;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary)}
+.cbt-primary{
+  align-self:center;height:32px;padding:0 16px;border-radius:9px;border:0;cursor:pointer;
+  background:#635BFF;color:#fff;font-size:12.5px;font-weight:500;
+}
+.cbt-primary:hover{filter:brightness(1.06)}
 .cbt-mark{
   background:color-mix(in oklab,#635BFF 22%,transparent);
   color:var(--dsw-alias-label-primary);

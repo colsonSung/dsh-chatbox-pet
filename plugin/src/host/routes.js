@@ -30,7 +30,15 @@ import { transcribeAudio } from './audio/transcribe.js';
 import { resolveModel } from './llm.js';
 import { expandWord, extractDocument, lookupWord, translateText } from './translate/index.js';
 import { speak } from './translate/speak.js';
-import { addFavorite, exportFavorites, listFavorites, removeFavorite } from './translate/favorites.js';
+import {
+  addFavorite,
+  countDue,
+  exportFavorites,
+  gradeFavorite,
+  listDue,
+  listFavorites,
+  removeFavorite,
+} from './translate/favorites.js';
 import { localSettings, probeLocal } from './translate/local.js';
 import { buildDeck } from './deck/generate.js';
 import { draftText } from './write/draft.js';
@@ -645,11 +653,15 @@ export function registerRoutes(ctx, config) {
           try {
             if (request.method === 'GET') {
               const url = new URL(request.url);
+              if (url.searchParams.get('due') === '1') {
+                const items = await listDue(Number(url.searchParams.get('limit') ?? 30) || 30);
+                return Response.json({ ok: true, result: { items } });
+              }
               const items = await listFavorites({
                 kind: url.searchParams.get('kind') ?? '',
                 search: url.searchParams.get('search') ?? '',
               });
-              return Response.json({ ok: true, result: { items } });
+              return Response.json({ ok: true, result: { items, counts: countDue(await listFavorites({})) } });
             }
             let body;
             try {
@@ -660,6 +672,10 @@ export function registerRoutes(ctx, config) {
             if (body?.action === 'remove') {
               const removed = await removeFavorite(String(body?.id ?? ''));
               return Response.json({ ok: true, result: { removed } });
+            }
+            if (body?.action === 'grade') {
+              const item = await gradeFavorite(String(body?.id ?? ''), String(body?.grade ?? ''));
+              return Response.json({ ok: true, result: { item } });
             }
             const item = await addFavorite({
               kind: body?.kind,

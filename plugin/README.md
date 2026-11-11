@@ -78,6 +78,12 @@ Bilibili / TikTok / 抖音 / Vimeo 链接变成模型能引用的证据——元
 「收藏本」视图：翻译结果点「收藏」即入册，按单词/句子过滤、搜索、删除、导出 Markdown。
 收藏存在 `~/.dsh/chatbox-pet/favorites.json`，跨会话保留。
 
+**复习**：收藏本上方有「复习 · N」，进入后是卡片式复习（正面词、背面释义，评 Again / Hard / Good），
+按简化 SM-2 自动安排下次时间；今天没到期的卡不会出现。
+
+**发音**：优先用本机 Kokoro（studio 音色 `af_heart` 美 / `bf_emma` 英），
+没有时回落到系统语音。
+
 **引擎**：优先用本机的翻译模型（LM Studio / 任何 OpenAI 兼容端点，默认
 `http://127.0.0.1:6121/v1` 的 `hy-mt2-7b`），句子约 0.5 秒；本机没起时自动回落到
 宿主已配置的模型。配置在 patch 的 `translate.local`（`enabled` / `baseUrl` / `model`）。
