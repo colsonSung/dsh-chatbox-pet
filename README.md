@@ -73,7 +73,7 @@ writes only `pet` to the prefs file; the other two switches keep their state.
 | **Small talk from your own notes** | Seven tones quoting your memory, meeting minutes, reading shelf or moments, with the source named. Local templates, no model call. |
 | **Direct manipulation** | Right-click to make it say an exact line, replay a line it remembers, or play one of 17 actions. |
 | **Video reading** | A host tool — `video_read` — turns a video file or a link into a timestamped transcript with speaker labels, OCR'd on-screen subtitles and keyframes. Local only; see [Video reading](#video-reading). |
-| **Quick actions** | A "More" pill at the composer's top-right opens a panel of shortcuts (transcribe, image, writing, video, read video, music, slides). A shortcut only fills the draft — it never sends. See [Quick actions](#quick-actions). |
+| **Quick actions** | A glass "More" pill **inside** the composer's top-right corner opens a panel of shortcuts (transcribe, image, writing, video, read video, music, slides). A shortcut only fills the draft — it never sends. See [Quick actions](#quick-actions). |
 
 ## Using it
 
@@ -170,8 +170,9 @@ Each gap is reported in `warnings`.
 
 ## Quick actions
 
-A small **More** pill sits at the composer's top-right (left of the pet; it hugs
-the corner when the pet is off). It opens a panel of shortcuts:
+A glass **More** pill sits **inside** the composer's top-right corner (the editor's
+right padding is widened so the pill never covers typed text). It opens a glass
+panel of shortcuts:
 
 | | |
 | --- | --- |

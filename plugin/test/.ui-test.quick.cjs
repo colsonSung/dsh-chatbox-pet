@@ -2442,7 +2442,7 @@ var require_react_dom_development = __commonJS({
         var HostPortal = 4;
         var HostComponent = 5;
         var HostText = 6;
-        var Fragment = 7;
+        var Fragment2 = 7;
         var Mode = 8;
         var ContextConsumer = 9;
         var ContextProvider = 10;
@@ -3599,7 +3599,7 @@ var require_react_dom_development = __commonJS({
               return "DehydratedFragment";
             case ForwardRef:
               return getWrappedName$1(type, type.render, "ForwardRef");
-            case Fragment:
+            case Fragment2:
               return "Fragment";
             case HostComponent:
               return type;
@@ -12028,7 +12028,7 @@ var require_react_dom_development = __commonJS({
             }
           }
           function updateFragment2(returnFiber, current2, fragment, lanes, key) {
-            if (current2 === null || current2.tag !== Fragment) {
+            if (current2 === null || current2.tag !== Fragment2) {
               var created = createFiberFromFragment(fragment, returnFiber.mode, lanes, key);
               created.return = returnFiber;
               return created;
@@ -12431,7 +12431,7 @@ var require_react_dom_development = __commonJS({
               if (child.key === key) {
                 var elementType = element.type;
                 if (elementType === REACT_FRAGMENT_TYPE) {
-                  if (child.tag === Fragment) {
+                  if (child.tag === Fragment2) {
                     deleteRemainingChildren(returnFiber, child.sibling);
                     var existing = useFiber(child, element.props.children);
                     existing.return = returnFiber;
@@ -17907,7 +17907,7 @@ var require_react_dom_development = __commonJS({
               var _resolvedProps2 = workInProgress2.elementType === type ? _unresolvedProps2 : resolveDefaultProps(type, _unresolvedProps2);
               return updateForwardRef(current2, workInProgress2, type, _resolvedProps2, renderLanes2);
             }
-            case Fragment:
+            case Fragment2:
               return updateFragment(current2, workInProgress2, renderLanes2);
             case Mode:
               return updateMode(current2, workInProgress2, renderLanes2);
@@ -18179,7 +18179,7 @@ var require_react_dom_development = __commonJS({
             case SimpleMemoComponent:
             case FunctionComponent:
             case ForwardRef:
-            case Fragment:
+            case Fragment2:
             case Mode:
             case Profiler:
             case ContextConsumer:
@@ -22440,7 +22440,7 @@ var require_react_dom_development = __commonJS({
           return fiber;
         }
         function createFiberFromFragment(elements, mode, lanes, key) {
-          var fiber = createFiber(Fragment, elements, key, mode);
+          var fiber = createFiber(Fragment2, elements, key, mode);
           fiber.lanes = lanes;
           return fiber;
         }
@@ -26295,12 +26295,24 @@ function Icon({ name }) {
       ] });
   }
 }
-function QuickActionsDock({ inputActions, t, locale, petVisible = true }) {
+function findComposerCard() {
+  const docked = document.querySelector(".cbp-quick");
+  if (docked && typeof docked.closest === "function") {
+    const card = docked.closest('[data-composer-card="true"]');
+    if (card) return card;
+  }
+  return document.querySelector('[data-composer-card="true"]');
+}
+function QuickActionsDock({ inputActions, t, locale }) {
   const canWrite = typeof inputActions?.setDraft === "function";
   const [open, setOpen] = React4.useState(false);
   const [anchor, setAnchor] = React4.useState(null);
   const buttonRef = React4.useRef(null);
   const panelRef = React4.useRef(null);
+  const [card, setCard] = React4.useState(null);
+  React4.useEffect(() => {
+    setCard(findComposerCard());
+  }, []);
   const reposition = React4.useCallback(() => {
     const rect = buttonRef.current?.getBoundingClientRect();
     if (rect === void 0 || rect === null) return;
@@ -26355,62 +26367,65 @@ function QuickActionsDock({ inputActions, t, locale, petVisible = true }) {
   };
   const label = t("quick.label");
   const active = typeof locale === "function" ? locale() : "zh";
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-quick", children: [
+  const pill = /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+    "button",
+    {
+      ref: buttonRef,
+      type: "button",
+      className: "cbp-more",
+      "data-cbp-more": "",
+      "aria-haspopup": "menu",
+      "aria-expanded": open ? "true" : "false",
+      "aria-label": t("quick.aria"),
+      title: canWrite ? t("quick.aria") : t("quick.disabled"),
+      disabled: !canWrite,
+      onMouseDown: (event) => event.preventDefault(),
+      onClick: () => setOpen((value) => !value),
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Icon, { name: "grid" }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-more-label", children: label })
+      ]
+    }
+  );
+  const panel = open && anchor !== null ? (0, import_react_dom2.createPortal)(
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
-      "button",
+      "div",
       {
-        ref: buttonRef,
-        type: "button",
-        className: petVisible ? "cbp-more" : "cbp-more cbp-more--alone",
-        "data-cbp-more": "",
-        "aria-haspopup": "menu",
-        "aria-expanded": open ? "true" : "false",
-        "aria-label": t("quick.aria"),
-        title: canWrite ? t("quick.aria") : t("quick.disabled"),
-        disabled: !canWrite,
-        onMouseDown: (event) => event.preventDefault(),
-        onClick: () => setOpen((value) => !value),
+        ref: panelRef,
+        className: "cbp-quick-panel",
+        role: "menu",
+        "aria-label": t("quick.title"),
+        "data-cbp-quick-panel": "true",
+        style: { right: `${anchor.right}px`, bottom: `${anchor.bottom}px` },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Icon, { name: "grid" }),
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-more-label", children: label })
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-quick-head", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-title", children: t("quick.title") }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-hint", children: t("quick.hint") })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-quick-grid", children: QUICK_ACTIONS.map((action) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+            "button",
+            {
+              type: "button",
+              className: "cbp-quick-item",
+              role: "menuitem",
+              "data-cbp-action": action.id,
+              onClick: () => choose(action),
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-icon", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Icon, { name: action.icon }) }),
+                /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-name", children: pick({ zh: action.zh, en: action.en }, active) })
+              ]
+            },
+            action.id
+          )) })
         ]
       }
     ),
-    open && anchor !== null ? (0, import_react_dom2.createPortal)(
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
-        "div",
-        {
-          ref: panelRef,
-          className: "cbp-quick-panel",
-          role: "menu",
-          "aria-label": t("quick.title"),
-          "data-cbp-quick-panel": "true",
-          style: { right: `${anchor.right}px`, bottom: `${anchor.bottom}px` },
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-quick-head", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-title", children: t("quick.title") }),
-              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-hint", children: t("quick.hint") })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-quick-grid", children: QUICK_ACTIONS.map((action) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
-              "button",
-              {
-                type: "button",
-                className: "cbp-quick-item",
-                role: "menuitem",
-                "data-cbp-action": action.id,
-                onClick: () => choose(action),
-                children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-icon", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Icon, { name: action.icon }) }),
-                  /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-name", children: pick({ zh: action.zh, en: action.en }, active) })
-                ]
-              },
-              action.id
-            )) })
-          ]
-        }
-      ),
-      document.body
-    ) : null
+    document.body
+  ) : null;
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick", style: { display: "none" }, "aria-hidden": "true" }),
+    card !== null ? (0, import_react_dom2.createPortal)(pill, card) : null,
+    panel
   ] });
 }
 

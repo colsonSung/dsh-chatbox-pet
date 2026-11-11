@@ -211,17 +211,7 @@ export function apply(ctx) {
         label: () => t('quick.label'),
         locale: NS,
       },
-      (props) => {
-        const prefs = usePrefs();
-        return (
-          <QuickActionsDock
-            inputActions={props?.inputActions}
-            t={t}
-            locale={locale}
-            petVisible={prefs.pet !== false}
-          />
-        );
-      },
+      (props) => <QuickActionsDock inputActions={props?.inputActions} t={t} locale={locale} />,
     ),
   );
 

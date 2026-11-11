@@ -1,16 +1,19 @@
 /**
- * The "更多" seat: one pill at the composer's top-right that opens a panel of
- * shortcuts (录音转写 / 图像生成 / 帮我写作 / …).
+ * The "更多" seat: one glass pill **inside** the composer's top-right corner
+ * that opens a panel of shortcuts (录音转写 / 图像生成 / 帮我写作 / …).
  *
- * Why a panel and not a row of chips: the composer already carries the pet, the
- * sparkle and the merge chip, and a row of six chips would push the draft down
- * and read as a second toolbar. The pill is the single, stable entry point; the
- * catalogue behind it is data (see quick-actions.js), so adding a shortcut is a
- * one-object change.
+ * Placement: the seat mounts as a direct child of the Host's
+ * `[data-composer-card="true"]` (position:relative, overflow:visible — verified
+ * in the live DOM) and is absolutely positioned at its top-right. The editor's
+ * right padding is widened by the stylesheet so the pill never sits on top of
+ * typed text.
  *
  * What a shortcut does: it writes the template into the composer draft and
  * closes. It never sends and never starts a request — the reader still presses
  * send after editing.
+ *
+ * The catalogue is data (see quick-actions.js); adding a shortcut later means
+ * adding one object there, never touching the component.
  */
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -99,6 +102,24 @@ function Icon({ name }) {
 }
 
 /**
+ * Find the Host's composer card the seat should live in.
+ *
+ * The card carries `data-composer-card="true"` (verified in the live DOM). When
+ * the seat was rendered in a dock slot, walk up from the docked root to the
+ * nearest card; when that fails (blank-session hero composer, or a future slot
+ * change), fall back to the first card in the document.
+ * @returns {HTMLElement|null} the card, or null if no composer is on screen.
+ */
+function findComposerCard() {
+  const docked = document.querySelector('.cbp-quick');
+  if (docked && typeof docked.closest === 'function') {
+    const card = docked.closest('[data-composer-card="true"]');
+    if (card) return card;
+  }
+  return document.querySelector('[data-composer-card="true"]');
+}
+
+/**
  * The quick-actions seat.
  * @param {object} props - slot props plus the plugin faces.
  * @param {any} props.inputActions - the Host's composer actions (setDraft lives here).
@@ -106,13 +127,20 @@ function Icon({ name }) {
  * @param {Function} props.locale - reads the active locale id.
  * @returns {object} the element.
  */
-export function QuickActionsDock({ inputActions, t, locale, petVisible = true }) {
+export function QuickActionsDock({ inputActions, t, locale }) {
   const canWrite = typeof inputActions?.setDraft === 'function';
   const [open, setOpen] = React.useState(false);
   // Fixed-position coordinates for the portal: right/bottom edges of the pill.
   const [anchor, setAnchor] = React.useState(null);
   const buttonRef = React.useRef(null);
   const panelRef = React.useRef(null);
+  // The seat itself is rendered in the dock slot; the visible pill is portaled
+  // into the composer card so it sits *inside* the card's top-right corner.
+  const [card, setCard] = React.useState(null);
+
+  React.useEffect(() => {
+    setCard(findComposerCard());
+  }, []);
 
   /**
    * Anchor the panel above the pill, right edges aligned.
@@ -186,108 +214,122 @@ export function QuickActionsDock({ inputActions, t, locale, petVisible = true })
   const label = t('quick.label');
   const active = typeof locale === 'function' ? locale() : 'zh';
 
+  const pill = (
+    <button
+      ref={buttonRef}
+      type="button"
+      className="cbp-more"
+      data-cbp-more=""
+      aria-haspopup="menu"
+      aria-expanded={open ? 'true' : 'false'}
+      aria-label={t('quick.aria')}
+      title={canWrite ? t('quick.aria') : t('quick.disabled')}
+      disabled={!canWrite}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => setOpen((value) => !value)}
+    >
+      <Icon name="grid" />
+      <span className="cbp-more-label">{label}</span>
+    </button>
+  );
+
+  const panel =
+    open && anchor !== null
+      ? createPortal(
+          <div
+            ref={panelRef}
+            className="cbp-quick-panel"
+            role="menu"
+            aria-label={t('quick.title')}
+            data-cbp-quick-panel="true"
+            style={{ right: `${anchor.right}px`, bottom: `${anchor.bottom}px` }}
+          >
+            <div className="cbp-quick-head">
+              <span className="cbp-quick-title">{t('quick.title')}</span>
+              <span className="cbp-quick-hint">{t('quick.hint')}</span>
+            </div>
+            <div className="cbp-quick-grid">
+              {QUICK_ACTIONS.map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  className="cbp-quick-item"
+                  role="menuitem"
+                  data-cbp-action={action.id}
+                  onClick={() => choose(action)}
+                >
+                  <span className="cbp-quick-icon">
+                    <Icon name={action.icon} />
+                  </span>
+                  <span className="cbp-quick-name">{pick({ zh: action.zh, en: action.en }, active)}</span>
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
+  // The dock slot keeps a zero-height root so the seat is mounted even before
+  // the composer card is found (hero composer mounts a tick later).
   return (
-    <div className="cbp-quick">
-      <button
-        ref={buttonRef}
-        type="button"
-        className={petVisible ? 'cbp-more' : 'cbp-more cbp-more--alone'}
-        data-cbp-more=""
-        aria-haspopup="menu"
-        aria-expanded={open ? 'true' : 'false'}
-        aria-label={t('quick.aria')}
-        title={canWrite ? t('quick.aria') : t('quick.disabled')}
-        disabled={!canWrite}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <Icon name="grid" />
-        <span className="cbp-more-label">{label}</span>
-      </button>
-      {open && anchor !== null
-        ? createPortal(
-            <div
-              ref={panelRef}
-              className="cbp-quick-panel"
-              role="menu"
-              aria-label={t('quick.title')}
-              data-cbp-quick-panel="true"
-              style={{ right: `${anchor.right}px`, bottom: `${anchor.bottom}px` }}
-            >
-              <div className="cbp-quick-head">
-                <span className="cbp-quick-title">{t('quick.title')}</span>
-                <span className="cbp-quick-hint">{t('quick.hint')}</span>
-              </div>
-              <div className="cbp-quick-grid">
-                {QUICK_ACTIONS.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    className="cbp-quick-item"
-                    role="menuitem"
-                    data-cbp-action={action.id}
-                    onClick={() => choose(action)}
-                  >
-                    <span className="cbp-quick-icon">
-                      <Icon name={action.icon} />
-                    </span>
-                    <span className="cbp-quick-name">{pick({ zh: action.zh, en: action.en }, active)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
-    </div>
+    <>
+      <span className="cbp-quick" style={{ display: 'none' }} aria-hidden="true" />
+      {card !== null ? createPortal(pill, card) : null}
+      {panel}
+    </>
   );
 }
 
-/** The seat's stylesheet: geometry mirrors the pet's root so both anchor to the card. */
+/** The seat's stylesheet: glass pill inside the card + a glass panel above it. */
 export const QUICK_CSS = `
-.cbp-quick{
-  position:relative;
-  height:0;
-  width:min(
-    calc(100% - var(--dsh-composer-side-clearance, 16px)*2),
-    var(--dsh-composer-card-max-width, 952px)
-  );
-  margin:0 auto;
-  overflow:visible;
-  pointer-events:none;
-  z-index:21;
+/* Give the typed text room: the pill occupies the card's top-right ~110px.
+   The editor's own right padding (8px) would let text run under the pill. */
+[data-composer-card="true"] [class*="_input"]{
+  padding-right:118px !important;
 }
 .cbp-more{
   position:absolute;
-  right:132px;
-  bottom:10px;
+  top:12px;
+  right:12px;
+  z-index:5;
   display:inline-flex;
   align-items:center;
   gap:5px;
-  height:26px;
-  padding:0 10px;
+  height:28px;
+  padding:0 12px;
   border-radius:999px;
-  border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 9%,transparent);
-  background:color-mix(in oklab,var(--dsw-alias-bg-overlay) 92%,transparent);
+  /* Glass: a translucent surface, blurred and saturated backdrop, a hairline
+     with a light top edge, and a soft shadow — not a flat opaque chip. */
+  border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 10%,transparent);
+  border-top-color:color-mix(in oklab,#ffffff 55%,transparent);
+  background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#ffffff) 42%,transparent);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  backdrop-filter:blur(18px) saturate(160%);
+  box-shadow:0 1px 2px color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 6%,transparent),0 6px 18px -8px color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 22%,transparent),inset 0 1px 0 color-mix(in oklab,#ffffff 40%,transparent);
   color:var(--dsw-alias-label-secondary);
   font-size:12px;
   font-weight:500;
   line-height:1;
   cursor:pointer;
-  pointer-events:auto;
-  backdrop-filter:blur(12px);
-  transition:background-color 120ms ease,color 120ms ease,border-color 120ms ease;
+  transition:background-color 120ms ease,color 120ms ease,border-color 120ms ease,box-shadow 120ms ease;
 }
-.cbp-more--alone{
-  right:20px;
+body[data-ds-dark-theme] .cbp-more{
+  background:color-mix(in oklab,#ffffff 10%,transparent);
+  border-color:color-mix(in oklab,#ffffff 16%,transparent);
+  border-top-color:color-mix(in oklab,#ffffff 26%,transparent);
+  box-shadow:0 1px 2px rgba(0,0,0,.2),0 6px 18px -8px rgba(0,0,0,.45),inset 0 1px 0 color-mix(in oklab,#ffffff 12%,transparent);
 }
 .cbp-more:hover{
   color:var(--dsw-alias-label-primary);
-  background:var(--dsw-alias-interactive-bg-hover);
+  background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#ffffff) 62%,transparent);
+}
+body[data-ds-dark-theme] .cbp-more:hover{
+  background:color-mix(in oklab,#ffffff 16%,transparent);
 }
 .cbp-more[aria-expanded="true"]{
   color:var(--dsw-alias-label-primary);
-  border-color:color-mix(in oklab,var(--dsw-alias-label-primary) 16%,transparent);
+  border-color:color-mix(in oklab,var(--dsw-alias-label-primary) 18%,transparent);
 }
 .cbp-more:focus-visible{
   outline:2px solid var(--dsw-alias-brand-primary);
@@ -309,14 +351,23 @@ export const QUICK_CSS = `
   position:fixed;
   z-index:60;
   box-sizing:border-box;
-  width:304px;
-  padding:10px 10px 12px;
-  border-radius:var(--dsw-radius-lg,14px);
-  border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 10%,transparent);
-  background:var(--dsw-alias-bg-overlay);
-  box-shadow:0 12px 32px -12px color-mix(in oklab,var(--dsw-alias-label-primary) 28%,transparent),0 2px 6px -2px color-mix(in oklab,var(--dsw-alias-label-primary) 12%,transparent);
-  backdrop-filter:blur(18px);
+  width:316px;
+  padding:12px 12px 14px;
+  border-radius:18px;
+  /* Same glass recipe as the pill, stronger blur so text stays readable. */
+  border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 10%,transparent);
+  border-top-color:color-mix(in oklab,#ffffff 55%,transparent);
+  background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#ffffff) 62%,transparent);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  backdrop-filter:blur(24px) saturate(180%);
+  box-shadow:0 18px 44px -14px color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 30%,transparent),0 3px 10px -3px color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 12%,transparent),inset 0 1px 0 color-mix(in oklab,#ffffff 40%,transparent);
   animation:cbp-quick-in 140ms cubic-bezier(.23,1,.32,1);
+}
+body[data-ds-dark-theme] .cbp-quick-panel{
+  background:color-mix(in oklab,#1c1c1e 72%,transparent);
+  border-color:color-mix(in oklab,#ffffff 14%,transparent);
+  border-top-color:color-mix(in oklab,#ffffff 22%,transparent);
+  box-shadow:0 18px 44px -14px rgba(0,0,0,.55),0 3px 10px -3px rgba(0,0,0,.3),inset 0 1px 0 color-mix(in oklab,#ffffff 10%,transparent);
 }
 @keyframes cbp-quick-in{
   from{opacity:0;transform:translateY(4px)}
@@ -326,11 +377,11 @@ export const QUICK_CSS = `
   display:flex;
   flex-direction:column;
   gap:2px;
-  padding:2px 4px 8px;
+  padding:2px 4px 10px;
 }
 .cbp-quick-title{
   color:var(--dsw-alias-label-primary);
-  font-size:12px;
+  font-size:12.5px;
   font-weight:600;
   line-height:1.4;
 }
@@ -342,16 +393,16 @@ export const QUICK_CSS = `
 .cbp-quick-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:2px;
+  gap:3px;
 }
 .cbp-quick-item{
   display:flex;
   align-items:center;
   gap:8px;
-  min-height:34px;
-  padding:0 8px;
+  min-height:36px;
+  padding:0 9px;
   border:0;
-  border-radius:var(--dsw-radius-md,8px);
+  border-radius:10px;
   background:transparent;
   color:var(--dsw-alias-label-primary);
   font-size:12.5px;
@@ -361,7 +412,7 @@ export const QUICK_CSS = `
   transition:background-color 100ms ease;
 }
 .cbp-quick-item:hover{
-  background:var(--dsw-alias-interactive-bg-hover);
+  background:color-mix(in oklab,var(--dsw-alias-label-primary) 7%,transparent);
 }
 .cbp-quick-item:focus-visible{
   outline:2px solid var(--dsw-alias-brand-primary);
@@ -383,8 +434,9 @@ export const QUICK_CSS = `
   white-space:nowrap;
 }
 @media (max-width:520px){
-  .cbp-more{right:20px;bottom:8px}
-  .cbp-quick-panel{width:min(304px,calc(100vw - 24px))}
+  .cbp-more{top:10px;right:10px}
+  [data-composer-card="true"] [class*="_input"]{padding-right:96px !important}
+  .cbp-quick-panel{width:min(316px,calc(100vw - 24px))}
 }
 @media (prefers-reduced-motion: reduce){
   .cbp-quick-panel{animation:none}

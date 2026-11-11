@@ -61,10 +61,15 @@ async function mount() {
   });
 
   const { JSDOM } = requireFrom('jsdom');
-  const dom = new JSDOM('<!doctype html><html><body><div id="host"></div></body></html>', {
-    url: 'http://localhost/',
-    pretendToBeVisual: true,
-  });
+  // The Host's composer card: position:relative, overflow:visible (see the live
+  // DOM probe). The pill must portal INTO it, so the test page carries one.
+  const dom = new JSDOM(
+    '<!doctype html><html><body><div data-composer-card="true"><div id="host"></div></div></body></html>',
+    {
+      url: 'http://localhost/',
+      pretendToBeVisual: true,
+    },
+  );
   globalThis.window = dom.window;
   globalThis.document = dom.window.document;
 
@@ -90,10 +95,14 @@ test('the pill opens the shortcut panel and a shortcut only fills the composer',
   root.render(React.createElement(QuickActionsDock, { inputActions, t, locale: () => 'zh' }));
   await flush();
 
-  const pill = host.querySelector('[data-cbp-more]');
+  const pill = document.querySelector('[data-cbp-more]');
   assert.ok(pill, 'the pill renders');
+  assert.equal(
+    pill.closest('[data-composer-card="true"]') !== null,
+    true,
+    'the pill lives inside the composer card, not outside it',
+  );
   assert.equal(pill.textContent.includes('更多'), true, 'the pill says 更多');
-  assert.equal(host.screen ?? null, null);
   assert.equal(document.querySelector('[data-cbp-quick-panel]'), null, 'the panel starts closed');
 
   pill.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
@@ -130,7 +139,7 @@ test('Escape closes the panel without writing anything', async () => {
   root.render(React.createElement(QuickActionsDock, { inputActions, t: translator(zh), locale: () => 'zh' }));
   await flush();
 
-  host.querySelector('[data-cbp-more]').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  document.querySelector('[data-cbp-more]').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await flush();
   assert.ok(document.querySelector('[data-cbp-quick-panel]'), 'panel open before Escape');
 
@@ -155,7 +164,7 @@ test('an English reader gets English labels and an English template', async () =
   );
   await flush();
 
-  host.querySelector('[data-cbp-more]').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  document.querySelector('[data-cbp-more]').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await flush();
   const panel = document.querySelector('[data-cbp-quick-panel]');
   assert.equal(panel.textContent.includes('Quick actions'), true);
