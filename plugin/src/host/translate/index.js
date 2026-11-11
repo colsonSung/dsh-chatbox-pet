@@ -1,10 +1,14 @@
 /**
  * The translation feature's Host half.
  *
- * Text goes through the Host's own model, so there is no third-party MT key and
- * no sentence leaving the machine beyond the model call the reader already
- * configured. Documents are parsed locally first (extract.py), then translated
- * as one string.
+ * Two engines, in this order:
+ *
+ *   local  an OpenAI-compatible server on this machine (LM Studio with hy-mt2-7b
+ *          by default). ~0.5 s per sentence, no key, no network.
+ *   host   the Host's configured chat model. Slower, used only when the local
+ *          server is not running or fails.
+ *
+ * Documents are parsed locally first (extract.py), then translated as one string.
  */
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -16,6 +20,7 @@ import { promisify } from 'node:util';
 
 import { aiError, complete } from '../llm.js';
 import { pythonPath } from '../deck/generate.js';
+import { localSettings, lookupLocal, parseDictionary, translateLocal } from './local.js';
 
 const run = promisify(execFile);
 
@@ -51,7 +56,7 @@ function lang(value) {
 }
 
 /**
- * Translate one block of text.
+ * Translate one block of text, local engine first.
  * @param {object} input - the request.
  * @param {any} input.llm - the Host llm service.
  * @param {string} input.provider - resolved provider id.
@@ -59,16 +64,37 @@ function lang(value) {
  * @param {string} input.text - the source text.
  * @param {string} [input.from] - source language id or auto.
  * @param {string} [input.to] - target language id.
+ * @param {object} [input.config] - the plugin row config (local engine settings).
  * @param {string} [input.sessionId] - Session id.
  * @param {AbortSignal} [input.signal] - cancellation.
- * @returns {Promise<{translated: string, from: string, to: string}>} the result.
+ * @returns {Promise<{translated: string, from: string, to: string, engine: string, ms: number}>} the result.
  */
-export async function translateText({ llm, provider, model, text, from = 'auto', to = 'zh', sessionId, signal }) {
+export async function translateText({ llm, provider, model, text, from = 'auto', to = 'zh', config, sessionId, signal }) {
   const source = typeof text === 'string' ? text.trim() : '';
   if (source === '') throw aiError('先输入要翻译的文字');
   if (source.length > MAX_CHARS) throw aiError(`一次最多翻译 ${MAX_CHARS} 个字符，请分段`);
   const target = LANGUAGES.includes(to) && to !== 'auto' ? to : 'zh';
   const fromId = lang(from);
+  const settings = localSettings(config);
+
+  if (settings.enabled) {
+    const started = Date.now();
+    try {
+      const translated = await translateLocal({
+        settings,
+        text: source,
+        fromLabel: fromId === 'auto' ? 'its own language (detect it)' : NAME[fromId],
+        toLabel: NAME[target],
+        signal,
+      });
+      if (translated !== '') return { translated, from: fromId, to: target, engine: 'local', ms: Date.now() - started };
+    } catch {
+      // A missing or busy local server is the normal path on another machine:
+      // fall through to the Host model instead of failing the request.
+    }
+  }
+
+  const started = Date.now();
   const fromLabel = fromId === 'auto' ? 'the source language (detect it)' : NAME[fromId];
   const system = [
     '你是一位专业译者，译文准确、自然、符合目标语言的表达习惯。',
@@ -76,7 +102,6 @@ export async function translateText({ llm, provider, model, text, from = 'auto',
     '只输出译文本身：不要解释、不要加引号、不要重复原文、不要 markdown 代码块。',
     '保留数字、专有名词、代码、URL 原样；原文分段就保留分段。',
   ].join('\n');
-
   const translated = await complete({
     llm,
     provider,
@@ -89,7 +114,53 @@ export async function translateText({ llm, provider, model, text, from = 'auto',
   });
   const clean = translated.replace(/^\s*\n+/, '').trim();
   if (clean === '') throw aiError('模型没有返回译文，请重试');
-  return { translated: clean, from: fromId, to: target };
+  return { translated: clean, from: fromId, to: target, engine: 'host', ms: Date.now() - started };
+}
+
+/**
+ * Dictionary lookup with the same local-first order.
+ * @param {object} input - the request.
+ * @param {any} input.llm - the Host llm service.
+ * @param {string} input.provider - resolved provider id.
+ * @param {string} input.model - resolved model id.
+ * @param {string} input.word - the headword.
+ * @param {'zh'|'en'} [input.locale] - explanation language.
+ * @param {object} [input.config] - plugin row config.
+ * @param {string} [input.sessionId] - Session id.
+ * @param {AbortSignal} [input.signal] - cancellation.
+ * @returns {Promise<object>} `{ dict, engine, ms }`.
+ */
+export async function lookupWord({ llm, provider, model, word, locale = 'zh', config, sessionId, signal }) {
+  const headword = typeof word === 'string' ? word.trim() : '';
+  if (headword === '') throw aiError('先输入要查的词');
+  if (headword.length > 60) throw aiError('这个词太长了，用句子翻译更合适');
+  const settings = localSettings(config);
+
+  if (settings.enabled) {
+    const started = Date.now();
+    try {
+      const dict = await lookupLocal({ settings, word: headword, locale, signal });
+      return { dict, engine: 'local', ms: Date.now() - started };
+    } catch {
+      // fall through to the Host model
+    }
+  }
+
+  const started = Date.now();
+  const zh = locale !== 'en';
+  const answer = await complete({
+    llm,
+    provider,
+    model,
+    system: zh ? '你是英汉词典编辑。只输出 JSON，不要解释、不要代码块。' : 'You are an English dictionary editor. Output JSON only, no prose.',
+    user: zh
+      ? `输出 JSON：{"word":"","phonetic":"","senses":[{"pos":"","meaning":"","example":""}],"note":""}。senses 最多 4 条。词条：${headword}`
+      : `Output JSON: {"word":"","phonetic":"","senses":[{"pos":"","meaning":"","example":""}],"note":""}. At most 4 senses. Word: ${headword}`,
+    maxTokens: 700,
+    sessionId,
+    signal,
+  });
+  return { dict: parseDictionary(answer, headword), engine: 'host', ms: Date.now() - started };
 }
 
 /**

@@ -28,8 +28,9 @@ import { resolveConfig, serviceOf } from './boost/config.js';
 import { mergeQueuedPrompts, optimizePrompt } from './boost/optimize.js';
 import { transcribeAudio } from './audio/transcribe.js';
 import { resolveModel } from './llm.js';
-import { extractDocument, translateText } from './translate/index.js';
+import { extractDocument, lookupWord, translateText } from './translate/index.js';
 import { addFavorite, exportFavorites, listFavorites, removeFavorite } from './translate/favorites.js';
+import { localSettings, probeLocal } from './translate/local.js';
 import { buildDeck } from './deck/generate.js';
 import { draftText } from './write/draft.js';
 
@@ -52,6 +53,7 @@ export const WRITE_ROUTE = `${ROUTE_BASE}/write`;
 export const TRANSLATE_ROUTE = `${ROUTE_BASE}/translate`;
 export const TRANSLATE_FILE_ROUTE = `${ROUTE_BASE}/translate/file`;
 export const FAVORITES_ROUTE = `${ROUTE_BASE}/favorites`;
+export const TRANSLATE_ENGINE_ROUTE = `${ROUTE_BASE}/translate/engine`;
 export const FAVORITES_EXPORT_ROUTE = `${ROUTE_BASE}/favorites/export`;
 
 /**
@@ -524,6 +526,19 @@ export function registerRoutes(ctx, config) {
           }
           try {
             const { provider, model } = resolveModel(ctx, config);
+            // A headword gets the dictionary shape; a sentence gets a translation.
+            if (body?.mode === 'dict') {
+              const result = await lookupWord({
+                llm: serviceOf(ctx, 'llm'),
+                provider,
+                model,
+                word: body?.text,
+                locale: body?.locale === 'en' ? 'en' : 'zh',
+                config,
+                sessionId: sessionIdFor(ctx, body),
+              });
+              return Response.json({ ok: true, result });
+            }
             const result = await translateText({
               llm: serviceOf(ctx, 'llm'),
               provider,
@@ -531,6 +546,7 @@ export function registerRoutes(ctx, config) {
               text: body?.text,
               from: body?.from,
               to: body?.to,
+              config,
               sessionId: sessionIdFor(ctx, body),
             });
             return Response.json({ ok: true, result });
@@ -552,6 +568,24 @@ export function registerRoutes(ctx, config) {
             return Response.json({ ok: true, result });
           } catch (error) {
             return Response.json(failure('chatbox-pet/extract-failed', messageOf(error)), { status: 200 });
+          }
+        },
+      });
+
+      add({
+        path: TRANSLATE_ENGINE_ROUTE,
+        methods: ['GET'],
+        requestBody: 'buffered',
+        fetch: async () => {
+          try {
+            const settings = localSettings(config);
+            const probe = await probeLocal(settings);
+            return Response.json({
+              ok: true,
+              result: { local: probe.ok, baseUrl: probe.baseUrl, model: probe.model, models: probe.models },
+            });
+          } catch {
+            return Response.json({ ok: true, result: { local: false, baseUrl: '', model: '', models: [] } });
           }
         },
       });

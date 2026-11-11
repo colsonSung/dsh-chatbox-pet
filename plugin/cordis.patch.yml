@@ -7,6 +7,12 @@
         pet: true
         boost: true
         sound: true
+        # 翻译页的本机翻译模型（LM Studio / 任何 OpenAI 兼容端点）。
+        translate:
+          local:
+            enabled: true
+            baseUrl: http://127.0.0.1:6121/v1
+            model: hy-mt2-7b
         # 第三个功能：视频理解（工具 video_read），配置放在 video 命名空间。
         video:
           whisperModel: mobiuslabsgmbh/faster-whisper-large-v3-turbo

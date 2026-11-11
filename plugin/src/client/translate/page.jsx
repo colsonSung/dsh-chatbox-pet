@@ -22,6 +22,24 @@ const LANGUAGES = [
 ];
 
 /**
+ * Is this input a headword rather than a sentence?
+ *
+ * A word or a short phrase gets the dictionary shape (phonetic, senses,
+ * examples); a sentence gets a translation. The rule is deliberately simple:
+ * at most three words, no sentence-ending punctuation, short enough to be a
+ * lookup.
+ * @param {string} text - the input.
+ * @returns {boolean} true when it should be looked up.
+ */
+export function looksLikeWord(text) {
+  const value = String(text ?? '').trim();
+  if (value === '' || value.length > 40) return false;
+  if (/[.!?。！？\n]/.test(value)) return false;
+  const words = value.split(/\s+/).filter(Boolean);
+  return words.length <= 3;
+}
+
+/**
  * One JSON call to the Host.
  * @param {string} path - route below the plugin base.
  * @param {object} [init] - fetch init.
@@ -57,6 +75,9 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
   const [tab, setTab] = React.useState('text');
   const [source, setSource] = React.useState('');
   const [target, setTarget] = React.useState('');
+  // Which engine answered, for the little badge under the result.
+  const [engine, setEngine] = React.useState(null);
+  const [dict, setDict] = React.useState(null);
   const [phase, setPhase] = React.useState('idle');
   const [error, setError] = React.useState('');
   const [docName, setDocName] = React.useState('');
@@ -95,6 +116,23 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Probe the local translation server once: the badge tells the reader whether
+  // they are on the fast local model or the slower Host one.
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/translate/engine`)
+      .then((response) => response.json())
+      .then((payload) => {
+        if (!cancelled && payload?.ok === true) setEngine(payload.result);
+      })
+      .catch(() => {
+        // A missing probe only means we do not show the badge.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   React.useEffect(() => () => {
     stopTimer();
     try {
@@ -113,13 +151,24 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
     setPhase('working');
     setError('');
     setSaved(false);
+    setDict(null);
+    const mode = looksLikeWord(clean) ? 'dict' : 'sentence';
+    // The dictionary explains in the *target* language, not the UI language:
+    // an English UI translating into Chinese must still get Chinese senses.
+    const dictLocale = to === 'zh' ? 'zh' : 'en';
     try {
       const result = await call('/translate', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text: clean, from, to, locale: zh ? 'zh' : 'en' }),
+        body: JSON.stringify({ text: clean, from, to, locale: mode === 'dict' ? dictLocale : zh ? 'zh' : 'en', mode }),
       });
-      setTarget(result.translated);
+      if (mode === 'dict') {
+        setDict(result.dict);
+        setTarget('');
+      } else {
+        setTarget(result.translated);
+      }
+      setEngine((previous) => ({ ...(previous ?? {}), last: { engine: result.engine, ms: result.ms } }));
       setPhase('done');
     } catch (failure) {
       setError(String(failure?.message ?? failure));
@@ -215,6 +264,32 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ action: 'add', kind: 'sentence', source, target, from, to }),
+      });
+      setSaved(true);
+      await loadFavorites();
+    } catch (failure) {
+      setError(String(failure?.message ?? failure));
+    }
+  };
+
+  /**
+   * Keep one dictionary headword in the favourite book.
+   * @param {object} entry - the dictionary card.
+   * @returns {Promise<void>} resolves when saved.
+   */
+  const favouriteDict = async (entry) => {
+    try {
+      await call('/favorites', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          action: 'add',
+          kind: 'word',
+          source: entry.word,
+          target: entry.senses.map((sense) => sense.meaning).join('；'),
+          from,
+          to,
+        }),
       });
       setSaved(true);
       await loadFavorites();
@@ -373,6 +448,38 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
             </span>
           </div>
 
+          {dict !== null ? (
+            <div className="cbt-dict" data-cbt-dict="true">
+              <div className="cbt-dict-head">
+                <span className="cbt-dict-word">{dict.word}</span>
+                {dict.phonetic ? <span className="cbt-dict-phonetic">{dict.phonetic}</span> : null}
+              </div>
+              <ul className="cbt-dict-senses">
+                {dict.senses.map((sense, index) => (
+                  <li key={index} className="cbt-dict-sense">
+                    {sense.pos ? <span className="cbt-dict-pos">{sense.pos}</span> : null}
+                    <span className="cbt-dict-meaning">{sense.meaning}</span>
+                    {sense.example ? <div className="cbt-dict-example">{sense.example}</div> : null}
+                  </li>
+                ))}
+              </ul>
+              {dict.note ? <div className="cbt-dict-note">{dict.note}</div> : null}
+              <div className="cbt-actions">
+                <button type="button" className="cbt-btn" onClick={() => void copy(dict.word + ' ' + dict.senses.map((s) => s.meaning).join('；'))}>
+                  {L('复制', 'Copy')}
+                </button>
+                <button
+                  type="button"
+                  className="cbt-btn"
+                  data-cbt-save="true"
+                  onClick={() => void favouriteDict(dict)}
+                >
+                  {saved ? L('已收藏', 'Saved') : L('收藏', 'Save')}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {target !== '' ? (
             <div className="cbt-result" data-cbt-result="true">
               <div className="cbt-result-text">{target}</div>
@@ -396,6 +503,14 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
               </div>
             </div>
           ) : null}
+
+          <div className="cbt-engine" data-cbt-engine="true">
+            {engine === null
+              ? ''
+              : engine.local
+                ? `${L('本机模型', 'Local')} · ${engine.model || 'local'}${engine.last ? ` · ${engine.last.ms} ms` : ''}`
+                : `${L('宿主模型', 'Host model')}${engine.last ? ` · ${engine.last.ms} ms` : ''}`}
+          </div>
 
           {error !== '' ? <p className="cbt-error" data-cbt-error="true">{error}</p> : null}
         </>
@@ -487,6 +602,17 @@ export const TRANSLATE_CSS = `
 .cbt-result{padding:12px;border-radius:12px;border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 9%,transparent);background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#fff) 40%,transparent);display:flex;flex-direction:column;gap:8px;max-height:180px;overflow:auto}
 .cbt-result-text{font-size:13.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
 .cbt-error{margin:0;color:#e5484d;font-size:11.5px;line-height:1.5}
+.cbt-engine{margin-top:-4px;color:var(--dsw-alias-label-tertiary);font-size:10.5px;line-height:1.5}
+.cbt-dict{padding:14px;border-radius:12px;border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 9%,transparent);background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#fff) 40%,transparent);display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto}
+.cbt-dict-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.cbt-dict-word{font-size:20px;font-weight:600;letter-spacing:-0.01em}
+.cbt-dict-phonetic{font-size:12px;color:var(--dsw-alias-label-secondary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.cbt-dict-senses{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.cbt-dict-sense{font-size:13px;line-height:1.6}
+.cbt-dict-pos{display:inline-block;margin-right:8px;color:#635BFF;font-size:11.5px;font-style:italic}
+.cbt-dict-meaning{color:var(--dsw-alias-label-primary)}
+.cbt-dict-example{margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.5;padding-left:2px;border-left:2px solid color-mix(in oklab,#635BFF 30%,transparent);padding-left:8px}
+.cbt-dict-note{padding-top:6px;border-top:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 8%,transparent);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.55}
 .cbt-voice{display:flex;align-items:center;gap:14px;padding:18px 0}
 .cbt-rec{width:48px;height:48px;border-radius:999px;border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 12%,transparent);background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#fff) 55%,transparent);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .cbt-rec[data-cbt-record="on"]{background:color-mix(in oklab,#e5484d 14%,transparent);border-color:color-mix(in oklab,#e5484d 45%,transparent)}

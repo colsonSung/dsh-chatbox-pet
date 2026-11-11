@@ -211,9 +211,14 @@ vendor, no extra key; it uses the model you already configured.
 
 | Input | What happens |
 | --- | --- |
-| Text | Translate with ⌘/Ctrl+Enter; eight target languages, source on auto-detect |
+| Text | Translate with ⌘/Ctrl+Enter; eight target languages, source on auto-detect — a single word returns a **dictionary card** (phonetic, senses, examples, usage note) |
 | Voice | Record → transcribed on this machine → the text lands in the input |
 | File | PDF / DOCX / TXT / Markdown / HTML parsed locally, then translated as one document (30 MB / 60k chars cap) |
+
+Engines, in order: your **local translation model** (LM Studio or any
+OpenAI-compatible endpoint — `hy-mt2-7b` on `127.0.0.1:6121` by default, about
+0.5 s per sentence), then the Host model when the local server is not running.
+Configured under `translate.local` in the patch (`enabled`, `baseUrl`, `model`).
 
 The **Saved** view is the favourite book: every translation can be saved as a
 word or a sentence, filtered, searched, deleted and exported as Markdown. It lives
