@@ -245,6 +245,30 @@ export function QuickActionsDock({ inputActions, t, locale, sessionId = '' }) {
   const label = t('quick.label');
   const active = typeof locale === 'function' ? locale() : 'zh';
 
+  // The shell pins every button to a 44px touch target on phones with
+  // !important, so a stylesheet rule cannot shrink this chip. Inline important
+  // declarations can, and they are re-applied when the breakpoint changes.
+  React.useEffect(() => {
+    const node = buttonRef.current;
+    if (node === null) return undefined;
+    const narrow = window.matchMedia('(max-width:520px)');
+    const tiny = window.matchMedia('(max-width:380px)');
+    const apply = () => {
+      const height = !narrow.matches ? 0 : tiny.matches ? 20 : 22;
+      for (const property of ['height', 'min-height', 'max-height', 'line-height']) {
+        if (height === 0) node.style.removeProperty(property);
+        else node.style.setProperty(property, `${height}px`, 'important');
+      }
+    };
+    apply();
+    narrow.addEventListener('change', apply);
+    tiny.addEventListener('change', apply);
+    return () => {
+      narrow.removeEventListener('change', apply);
+      tiny.removeEventListener('change', apply);
+    };
+  }, []);
+
   const pill = (
     <button
       ref={buttonRef}
@@ -483,10 +507,37 @@ body[data-ds-dark-theme] .cbp-quick-panel{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+/* Phones: the pill sits inside a narrow composer, so it has to be flat and
+   light — a 28px capsule with a heavy shadow reads as a floating button and
+   eats the first line of the input. */
 @media (max-width:520px){
-  .cbp-more{top:10px;right:10px}
-  [data-composer-card="true"] [class*="_input"]{padding-right:96px !important}
+  /* The shell pins every button to a 44px touch target on phones (!important),
+     which is what made this pill look tall. A word chip is not a primary
+     control, so the height has to be forced back down here. */
+  .cbp-more{
+    top:8px !important;
+    right:8px !important;
+    height:22px !important;
+    min-height:22px !important;
+    max-height:22px !important;
+    padding:0 9px !important;
+    gap:4px !important;
+    font-size:11px !important;
+    line-height:22px !important;
+    border-radius:999px !important;
+    box-shadow:0 1px 1px color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 5%,transparent),inset 0 1px 0 color-mix(in oklab,#ffffff 32%,transparent) !important;
+    -webkit-backdrop-filter:blur(12px) saturate(140%) !important;
+    backdrop-filter:blur(12px) saturate(140%) !important;
+  }
+  .cbp-more svg{width:11px !important;height:11px !important}
+  /* The pill is shorter but not narrower — it still holds an icon and a word. */
+  [data-composer-card="true"] [class*="_input"]{padding-right:100px !important}
   .cbp-quick-panel{width:min(316px,calc(100vw - 24px))}
+}
+@media (max-width:380px){
+  .cbp-more{height:20px !important;min-height:20px !important;max-height:20px !important;line-height:20px !important;padding:0 8px !important;font-size:10.5px !important;gap:3px !important}
+  .cbp-more svg{width:10px !important;height:10px !important}
+  [data-composer-card="true"] [class*="_input"]{padding-right:92px !important}
 }
 @media (prefers-reduced-motion: reduce){
   .cbp-quick-panel{animation:none}
