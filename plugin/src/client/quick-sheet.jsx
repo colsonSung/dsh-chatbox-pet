@@ -86,6 +86,62 @@ export function fillDraft(inputActions, text) {
  */
 export function Sheet({ title, hint, onClose, children, t, wide = false }) {
   const ref = React.useRef(null);
+  // Size the reader dragged the sheet to last time. Kept in localStorage so the
+  // panel opens the same size next session; clamped to the viewport on restore.
+  const [size, setSize] = React.useState(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem('chatbox-pet:sheet-size') || 'null');
+      if (raw && Number.isFinite(raw.width) && Number.isFinite(raw.height)) {
+        return {
+          width: Math.min(raw.width, window.innerWidth - 48),
+          height: Math.min(raw.height, window.innerHeight - 48),
+        };
+      }
+    } catch {
+      // ignore a broken value
+    }
+    return null;
+  });
+  const dragRef = React.useRef(null);
+
+  /**
+   * Start a resize drag from the bottom-right grip.
+   * @param {object} event - the pointer event.
+   * @returns {void}
+   */
+  const startResize = (event) => {
+    const node = ref.current;
+    if (node === null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = node.getBoundingClientRect();
+    dragRef.current = { x: event.clientX, y: event.clientY, width: rect.width, height: rect.height };
+    const onMove = (move) => {
+      const start = dragRef.current;
+      if (start === null) return;
+      setSize({
+        width: Math.min(Math.max(360, start.width + (move.clientX - start.x)), window.innerWidth - 48),
+        height: Math.min(Math.max(220, start.height + (move.clientY - start.y)), window.innerHeight - 48),
+      });
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      try {
+        const node2 = ref.current;
+        if (node2 !== null) {
+          const rect2 = node2.getBoundingClientRect();
+          localStorage.setItem('chatbox-pet:sheet-size', JSON.stringify({ width: Math.round(rect2.width), height: Math.round(rect2.height) }));
+        }
+      } catch {
+        // storage is optional
+      }
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
   React.useEffect(() => {
     const onKey = (event) => {
       if (event.key === 'Escape') {
@@ -100,7 +156,14 @@ export function Sheet({ title, hint, onClose, children, t, wide = false }) {
 
   return createPortal(
     <div className="cbp-sheet-veil" data-cbp-sheet="true" onMouseDown={(event) => event.stopPropagation()}>
-      <div className={wide ? 'cbp-sheet cbp-sheet-wide' : 'cbp-sheet'} role="dialog" aria-modal="true" aria-label={title} ref={ref}>
+      <div
+        className={wide ? 'cbp-sheet cbp-sheet-wide' : 'cbp-sheet'}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        ref={ref}
+        style={size === null ? undefined : { width: `${Math.round(size.width)}px`, height: `${Math.round(size.height)}px` }}
+      >
         <div className="cbp-sheet-head">
           <span className="cbp-sheet-title">{title}</span>
           <button type="button" className="cbp-sheet-close" aria-label={t('sheet.close')} onClick={onClose}>
@@ -109,6 +172,14 @@ export function Sheet({ title, hint, onClose, children, t, wide = false }) {
         </div>
         {hint ? <p className="cbp-sheet-hint">{hint}</p> : null}
         <div className="cbp-sheet-body">{children}</div>
+        <button
+          type="button"
+          className="cbp-sheet-grip"
+          data-cbp-sheet-grip="true"
+          aria-label={t('sheet.resize')}
+          title={t('sheet.resize')}
+          onPointerDown={startResize}
+        />
       </div>
     </div>,
     document.body,
@@ -493,6 +564,7 @@ export const SHEET_CSS = `
 }
 @keyframes cbp-sheet-fade{from{opacity:0}to{opacity:1}}
 .cbp-sheet{
+  position:relative;
   box-sizing:border-box;
   display:flex;
   flex-direction:column;
@@ -711,6 +783,36 @@ body[data-ds-dark-theme] .cbp-sheet{
   width:min(660px,100%);
   max-height:min(84vh,720px);
 }
+/* A solid size is set inline while resizing; the height must then win over the
+   CSS max-height, otherwise the grip would move without the panel following. */
+.cbp-sheet[style*="height"]{
+  max-height:none;
+}
+.cbp-sheet-grip{
+  position:absolute;
+  right:6px;
+  bottom:6px;
+  width:16px;
+  height:16px;
+  padding:0;
+  border:0;
+  background:transparent;
+  cursor:nwse-resize;
+  opacity:.45;
+  transition:opacity 120ms ease;
+}
+.cbp-sheet-grip:hover{opacity:.9}
+.cbp-sheet-grip::before,
+.cbp-sheet-grip::after{
+  content:"";
+  position:absolute;
+  right:0;
+  bottom:0;
+  border-style:solid;
+  border-color:transparent;
+}
+.cbp-sheet-grip::before{border-width:0 0 10px 10px;border-bottom-color:color-mix(in oklab,var(--dsw-alias-label-primary) 45%,transparent)}
+.cbp-sheet-grip::after{right:3px;bottom:3px;border-width:0 0 6px 6px;border-bottom-color:color-mix(in oklab,var(--dsw-alias-label-primary) 30%,transparent)}
 @media (prefers-reduced-motion: reduce){
   .cbp-sheet-veil,.cbp-sheet{animation:none}
 }

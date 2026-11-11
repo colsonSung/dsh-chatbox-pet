@@ -197,6 +197,10 @@ The first four open a **workbench** and really do the work:
   kept) and downloadable from the panel;
 - **Read video** prepares a `video_read` instruction for a pasted link.
 
+Every sheet can be resized by dragging its bottom-right corner (the size is
+remembered). In the dictionary card the headword is highlighted inside examples,
+latin words in a translation are clickable, and selecting Chinese text offers a
+"Look up" chip — a card opened that way has a "back to translation" link.
 Nothing is sent for you: every result lands in the composer (or on disk) and you
 press send yourself. The last three shortcuts only fill a prompt — they need a
 model or a service this machine does not have, and saying so is better than

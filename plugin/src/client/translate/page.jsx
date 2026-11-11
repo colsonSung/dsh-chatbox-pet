@@ -40,6 +40,81 @@ export function looksLikeWord(text) {
 }
 
 /**
+ * Escape one string for use inside a RegExp.
+ * @param {string} value - the literal text.
+ * @returns {string} the escaped pattern.
+ */
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Render one example sentence with the headword marked.
+ *
+ * The model writes the example itself, so the headword may appear inflected
+ * (milestones, reached). A stem match covers the common suffixes without
+ * pretending to be a lemmatiser.
+ * @param {string} text - the example.
+ * @param {string} word - the headword.
+ * @returns {Array} React children, plain strings and <mark> elements.
+ */
+export function highlightTerm(text, word) {
+  const source = String(text ?? '');
+  const head = String(word ?? '').trim();
+  if (head === '') return [source];
+  const stem = head.replace(/(e|y)$/i, '');
+  const pattern = new RegExp(`\\b${escapeRegExp(stem)}[a-z]{0,3}\\b`, 'gi');
+  const out = [];
+  let last = 0;
+  for (const match of source.matchAll(pattern)) {
+    const at = match.index ?? 0;
+    if (at > last) out.push(source.slice(last, at));
+    out.push(
+      <mark className="cbt-mark" key={`${at}-${match[0]}`}>
+        {match[0]}
+      </mark>,
+    );
+    last = at + match[0].length;
+  }
+  if (last < source.length) out.push(source.slice(last));
+  return out.length === 0 ? [source] : out;
+}
+
+/**
+ * Split a translation into clickable tokens.
+ *
+ * Only latin words are clickable: segmenting Chinese needs a dictionary the
+ * bundle does not ship, and guessing would make the page feel broken.
+ * @param {string} text - the translation.
+ * @param {Function} onPick - called with the clicked word.
+ * @returns {Array} React children.
+ */
+export function tokenizeForLookup(text, onPick) {
+  const source = String(text ?? '');
+  const out = [];
+  let last = 0;
+  for (const match of source.matchAll(/[A-Za-z][A-Za-z'’-]{1,24}/g)) {
+    const at = match.index ?? 0;
+    if (at > last) out.push(source.slice(last, at));
+    const word = match[0].replace(/['’-]+$/, '');
+    out.push(
+      <button
+        type="button"
+        className="cbt-word"
+        data-cbt-word={word}
+        key={`${at}-${word}`}
+        onClick={() => onPick(word)}
+      >
+        {match[0]}
+      </button>,
+    );
+    last = at + match[0].length;
+  }
+  if (last < source.length) out.push(source.slice(last));
+  return out.length === 0 ? [source] : out;
+}
+
+/**
  * One JSON call to the Host.
  * @param {string} path - route below the plugin base.
  * @param {object} [init] - fetch init.
@@ -82,6 +157,11 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
   const [expand, setExpand] = React.useState(null);
   const [expandLoading, setExpandLoading] = React.useState(false);
   const [playing, setPlaying] = React.useState('');
+  // Where the current dictionary card came from: the input box or a word in the
+  // translation. A card opened from the translation offers a way back.
+  const [dictFrom, setDictFrom] = React.useState('');
+  // Text the reader selected inside the translation, with its screen position.
+  const [picked, setPicked] = React.useState(null);
   const [phase, setPhase] = React.useState('idle');
   const [error, setError] = React.useState('');
   const [docName, setDocName] = React.useState('');
@@ -157,6 +237,7 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
     setSaved(false);
     setDict(null);
     setExpand(null);
+    setPicked(null);
     const mode = looksLikeWord(clean) ? 'dict' : 'sentence';
     // The dictionary explains in the *target* language, not the UI language:
     // an English UI translating into Chinese must still get Chinese senses.
@@ -170,6 +251,7 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
       if (mode === 'dict') {
         setDict(result.dict);
         setTarget('');
+        setDictFrom('input');
         void loadExpand(result.dict.word);
       } else {
         setTarget(result.translated);
@@ -276,6 +358,73 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
     } catch (failure) {
       setError(String(failure?.message ?? failure));
     }
+  };
+
+  /**
+   * Read the current selection inside the translation and offer to look it up.
+   *
+   * Latin words are already clickable one by one; this is what makes Chinese
+   * text work too, since segmenting it needs a dictionary the bundle does not
+   * ship.
+   * @param {object} event - the mouseup event.
+   * @returns {void}
+   */
+  const onSelectInResult = (event) => {
+    const host = event.currentTarget;
+    const selection = typeof window.getSelection === 'function' ? window.getSelection() : null;
+    const text = String(selection?.toString?.() ?? '').trim();
+    if (text === '' || text.length > 40) {
+      setPicked(null);
+      return;
+    }
+    const range = selection?.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    if (range === null || host === null || !host.contains(range.commonAncestorContainer)) {
+      setPicked(null);
+      return;
+    }
+    const rect = range.getBoundingClientRect();
+    setPicked({
+      text,
+      // Position relative to the result box so the chip lands under the selection.
+      x: Math.round(rect.left - host.getBoundingClientRect().left),
+      y: Math.round(rect.top - host.getBoundingClientRect().top),
+    });
+  };
+
+  /**
+   * Look up one word clicked inside the translation.
+   * @param {string} word - the clicked word.
+   * @returns {Promise<void>} resolves when the card is shown.
+   */
+  const lookupWordFromResult = async (word) => {
+    setError('');
+    setSaved(false);
+    setPhase('working');
+    try {
+      const result = await call('/translate', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: word, mode: 'dict', locale: to === 'zh' ? 'zh' : 'en' }),
+      });
+      setDict(result.dict);
+      setExpand(null);
+      setDictFrom('result');
+      setPhase('done');
+      void loadExpand(result.dict.word);
+    } catch (failure) {
+      setError(String(failure?.message ?? failure));
+      setPhase('idle');
+    }
+  };
+
+  /**
+   * Close a card opened from the translation and return to it.
+   * @returns {void}
+   */
+  const backToResult = () => {
+    setDict(null);
+    setExpand(null);
+    setDictFrom('');
   };
 
   /**
@@ -502,6 +651,11 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
 
           {dict !== null ? (
             <div className="cbt-dict" data-cbt-dict="true">
+              {dictFrom === 'result' ? (
+                <button type="button" className="cbt-back" data-cbt-back="true" onClick={backToResult}>
+                  ← {L('返回译文', 'Back to translation')}
+                </button>
+              ) : null}
               <div className="cbt-dict-head">
                 <span className="cbt-dict-word">{dict.word}</span>
                 {dict.phonetic ? <span className="cbt-dict-phonetic">{dict.phonetic}</span> : null}
@@ -531,7 +685,11 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
                   <li key={index} className="cbt-dict-sense">
                     {sense.pos ? <span className="cbt-dict-pos">{sense.pos}</span> : null}
                     <span className="cbt-dict-meaning">{sense.meaning}</span>
-                    {sense.example ? <div className="cbt-dict-example">{sense.example}</div> : null}
+                    {sense.example ? (
+                      <div className="cbt-dict-example" data-cbt-example="true">
+                        {highlightTerm(sense.example, dict.word)}
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -607,7 +765,30 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
 
           {target !== '' ? (
             <div className="cbt-result" data-cbt-result="true">
-              <div className="cbt-result-text">{target}</div>
+              <div
+                className="cbt-result-text"
+                data-cbt-result-text="true"
+                onMouseUp={onSelectInResult}
+                onKeyUp={onSelectInResult}
+              >
+                {tokenizeForLookup(target, (word) => void lookupWordFromResult(word))}
+                {picked !== null ? (
+                  <button
+                    type="button"
+                    className="cbt-pick"
+                    data-cbt-pick="true"
+                    style={{ left: `${picked.x}px`, top: `${Math.max(0, picked.y - 26)}px` }}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      const text = picked.text;
+                      setPicked(null);
+                      void lookupWordFromResult(text);
+                    }}
+                  >
+                    {L('查询', 'Look up')}「{picked.text}」
+                  </button>
+                ) : null}
+              </div>
               <div className="cbt-actions">
                 <button type="button" className="cbt-btn" onClick={() => void copy(target)}>
                   {L('复制', 'Copy')}
@@ -725,9 +906,57 @@ export const TRANSLATE_CSS = `
 .cbt-btn-primary:hover{background:#5149E6}
 .cbt-hint{color:var(--dsw-alias-label-tertiary);font-size:11px}
 .cbt-result{padding:12px;border-radius:12px;border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 9%,transparent);background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#fff) 40%,transparent);display:flex;flex-direction:column;gap:8px;max-height:180px;overflow:auto}
-.cbt-result-text{font-size:13.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.cbt-result-text{position:relative;font-size:13.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.cbt-pick{
+  position:absolute;
+  z-index:2;
+  padding:3px 9px;
+  border-radius:999px;
+  border:1px solid color-mix(in oklab,#635BFF 45%,transparent);
+  background:color-mix(in oklab,#635BFF 16%,var(--dsw-alias-bg-overlay,#fff));
+  color:var(--dsw-alias-label-primary);
+  font-size:11.5px;
+  cursor:pointer;
+  white-space:nowrap;
+  box-shadow:0 4px 12px -4px color-mix(in oklab,var(--dsw-alias-label-primary) 30%,transparent);
+}
+.cbt-pick:hover{background:color-mix(in oklab,#635BFF 26%,var(--dsw-alias-bg-overlay,#fff))}
 .cbt-error{margin:0;color:#e5484d;font-size:11.5px;line-height:1.5}
 .cbt-engine{margin-top:-4px;color:var(--dsw-alias-label-tertiary);font-size:10.5px;line-height:1.5}
+.cbt-mark{
+  background:color-mix(in oklab,#635BFF 22%,transparent);
+  color:var(--dsw-alias-label-primary);
+  border-radius:3px;
+  padding:0 2px;
+}
+.cbt-word{
+  display:inline;
+  padding:0;
+  margin:0;
+  border:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  cursor:pointer;
+  border-radius:3px;
+  text-decoration:underline;
+  text-decoration-color:color-mix(in oklab,#635BFF 45%,transparent);
+  text-underline-offset:2px;
+}
+.cbt-word:hover{
+  background:color-mix(in oklab,#635BFF 14%,transparent);
+  text-decoration-color:#635BFF;
+}
+.cbt-back{
+  align-self:flex-start;
+  padding:0 0 2px;
+  border:0;
+  background:transparent;
+  color:#635BFF;
+  font-size:11.5px;
+  cursor:pointer;
+}
+.cbt-back:hover{text-decoration:underline}
 .cbt-dict{padding:14px;border-radius:12px;border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 9%,transparent);background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#fff) 40%,transparent);display:flex;flex-direction:column;gap:8px;max-height:min(46vh,360px);overflow:auto}
 .cbt-dict-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .cbt-dict-play{display:flex;gap:4px;margin-left:2px}

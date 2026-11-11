@@ -10,5 +10,6 @@ import { PetDock } from '../src/client/pet.jsx';
 export { createRoot, PetDock, React };
 export { SettingsRow } from '../src/client/settings-row.jsx';
 export { QuickActionsDock } from '../src/client/quick-actions.jsx';
+export { TranslateWorkbench } from '../src/client/translate/page.jsx';
 export { prefsStore } from '../src/client/prefs.js';
 export { en, zh } from '../src/client/locale.js';
