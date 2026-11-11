@@ -14,6 +14,8 @@
  * segments — falls to the Host's own 404 without touching the filesystem.
  * No handler ever throws.
  */
+import { readFile } from 'node:fs/promises';
+
 import { serveAssetConditional } from './assets.js';
 import { ASSET_FILES, loadPack } from './pack.js';
 import { activeBroadcast, computeState, setBroadcast } from './session.js';
@@ -24,6 +26,10 @@ import { createQuipEngine } from './quip.js';
 import { collectContext } from './boost/sources/index.js';
 import { resolveConfig, serviceOf } from './boost/config.js';
 import { mergeQueuedPrompts, optimizePrompt } from './boost/optimize.js';
+import { transcribeAudio } from './audio/transcribe.js';
+import { resolveModel } from './llm.js';
+import { buildDeck } from './deck/generate.js';
+import { draftText } from './write/draft.js';
 
 /** Route base. Never collides with the desktop pet's `/dsh-pet-7340`. */
 export const ROUTE_BASE = '/api/chatbox-pet';
@@ -36,6 +42,10 @@ export const BOOST_ROUTE = `${ROUTE_BASE}/boost`;
 export const MERGE_ROUTE = `${ROUTE_BASE}/merge`;
 export const SAID_ROUTE = `${ROUTE_BASE}/said`;
 export const QUIP_ROUTE = `${ROUTE_BASE}/quip`;
+/** Quick actions: local transcription, deck generation, writing. */
+export const TRANSCRIBE_ROUTE = `${ROUTE_BASE}/transcribe`;
+export const DECK_ROUTE = `${ROUTE_BASE}/deck`;
+export const WRITE_ROUTE = `${ROUTE_BASE}/write`;
 
 /**
  * Register every route. Returns a disposer.
@@ -368,6 +378,103 @@ export function registerRoutes(ctx, config) {
               }
             }
             return Response.json(failure('prompt-boost/failed', messageOf(error)), { status: 200 });
+          }
+        },
+      });
+
+      // ------------------------------------------------------- quick actions --
+      // Three routes behind the "更多" panel. They are deliberately independent
+      // of the pet/boost switches: the panel works even with the pet hidden.
+      add({
+        path: TRANSCRIBE_ROUTE,
+        methods: ['POST'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          try {
+            const bytes = Buffer.from(await request.arrayBuffer());
+            const name = new URL(request.url).searchParams.get('name') ?? '';
+            const language = new URL(request.url).searchParams.get('language') ?? '';
+            const result = await transcribeAudio({ bytes, name, language });
+            return Response.json({ ok: true, result });
+          } catch (error) {
+            return Response.json(failure('chatbox-pet/transcribe-failed', messageOf(error)), { status: 200 });
+          }
+        },
+      });
+
+      add({
+        path: DECK_ROUTE,
+        methods: ['POST'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          let body;
+          try {
+            body = await request.json();
+          } catch {
+            return Response.json(failure('chatbox-pet/bad-request', 'body is not JSON'), { status: 400 });
+          }
+          try {
+            const { provider, model } = resolveModel(ctx, config);
+            const result = await buildDeck({
+              llm: serviceOf(ctx, 'llm'),
+              provider,
+              model,
+              topic: body?.topic,
+              audience: body?.audience,
+              pages: body?.pages,
+              points: body?.points,
+              locale: body?.locale === 'en' ? 'en' : 'zh',
+              sessionId: typeof body?.session === 'string' ? body.session : undefined,
+            });
+            let base64 = '';
+            try {
+              base64 = (await readFile(result.path)).toString('base64');
+            } catch {
+              // The file is the deliverable; the preview copy is a convenience.
+            }
+            return Response.json({
+              ok: true,
+              result: {
+                path: result.path,
+                name: result.name,
+                slides: result.slides,
+                title: result.outline?.title ?? '',
+                base64,
+              },
+            });
+          } catch (error) {
+            return Response.json(failure('chatbox-pet/deck-failed', messageOf(error)), { status: 200 });
+          }
+        },
+      });
+
+      add({
+        path: WRITE_ROUTE,
+        methods: ['POST'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          let body;
+          try {
+            body = await request.json();
+          } catch {
+            return Response.json(failure('chatbox-pet/bad-request', 'body is not JSON'), { status: 400 });
+          }
+          try {
+            const { provider, model } = resolveModel(ctx, config);
+            const result = await draftText({
+              llm: serviceOf(ctx, 'llm'),
+              provider,
+              model,
+              genre: body?.genre,
+              topic: body?.topic,
+              tone: body?.tone,
+              points: body?.points,
+              locale: body?.locale === 'en' ? 'en' : 'zh',
+              sessionId: typeof body?.session === 'string' ? body.session : undefined,
+            });
+            return Response.json({ ok: true, result });
+          } catch (error) {
+            return Response.json(failure('chatbox-pet/write-failed', messageOf(error)), { status: 200 });
           }
         },
       });

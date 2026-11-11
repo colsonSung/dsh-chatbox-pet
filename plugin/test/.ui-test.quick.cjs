@@ -33,9 +33,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// ../../chat-selection/node_modules/react/cjs/react.development.js
+// node_modules/react/cjs/react.development.js
 var require_react_development = __commonJS({
-  "../../chat-selection/node_modules/react/cjs/react.development.js"(exports, module2) {
+  "node_modules/react/cjs/react.development.js"(exports, module2) {
     "use strict";
     if (true) {
       (function() {
@@ -1092,7 +1092,7 @@ var require_react_development = __commonJS({
           }
           return dispatcher.useContext(Context);
         }
-        function useState5(initialState) {
+        function useState6(initialState) {
           var dispatcher = resolveDispatcher();
           return dispatcher.useState(initialState);
         }
@@ -1100,11 +1100,11 @@ var require_react_development = __commonJS({
           var dispatcher = resolveDispatcher();
           return dispatcher.useReducer(reducer, initialArg, init);
         }
-        function useRef4(initialValue) {
+        function useRef5(initialValue) {
           var dispatcher = resolveDispatcher();
           return dispatcher.useRef(initialValue);
         }
-        function useEffect4(create, deps) {
+        function useEffect5(create, deps) {
           var dispatcher = resolveDispatcher();
           return dispatcher.useEffect(create, deps);
         }
@@ -1887,15 +1887,15 @@ var require_react_development = __commonJS({
         exports.useContext = useContext;
         exports.useDebugValue = useDebugValue;
         exports.useDeferredValue = useDeferredValue;
-        exports.useEffect = useEffect4;
+        exports.useEffect = useEffect5;
         exports.useId = useId;
         exports.useImperativeHandle = useImperativeHandle;
         exports.useInsertionEffect = useInsertionEffect;
         exports.useLayoutEffect = useLayoutEffect3;
         exports.useMemo = useMemo;
         exports.useReducer = useReducer;
-        exports.useRef = useRef4;
-        exports.useState = useState5;
+        exports.useRef = useRef5;
+        exports.useState = useState6;
         exports.useSyncExternalStore = useSyncExternalStore3;
         exports.useTransition = useTransition;
         exports.version = ReactVersion;
@@ -1907,9 +1907,9 @@ var require_react_development = __commonJS({
   }
 });
 
-// ../../chat-selection/node_modules/react/index.js
+// node_modules/react/index.js
 var require_react = __commonJS({
-  "../../chat-selection/node_modules/react/index.js"(exports, module2) {
+  "node_modules/react/index.js"(exports, module2) {
     "use strict";
     if (false) {
       module2.exports = null;
@@ -1919,9 +1919,9 @@ var require_react = __commonJS({
   }
 });
 
-// ../../chat-selection/node_modules/scheduler/cjs/scheduler.development.js
+// node_modules/scheduler/cjs/scheduler.development.js
 var require_scheduler_development = __commonJS({
-  "../../chat-selection/node_modules/scheduler/cjs/scheduler.development.js"(exports) {
+  "node_modules/scheduler/cjs/scheduler.development.js"(exports) {
     "use strict";
     if (true) {
       (function() {
@@ -2369,9 +2369,9 @@ var require_scheduler_development = __commonJS({
   }
 });
 
-// ../../chat-selection/node_modules/scheduler/index.js
+// node_modules/scheduler/index.js
 var require_scheduler = __commonJS({
-  "../../chat-selection/node_modules/scheduler/index.js"(exports, module2) {
+  "node_modules/scheduler/index.js"(exports, module2) {
     "use strict";
     if (false) {
       module2.exports = null;
@@ -2381,9 +2381,9 @@ var require_scheduler = __commonJS({
   }
 });
 
-// ../../chat-selection/node_modules/react-dom/cjs/react-dom.development.js
+// node_modules/react-dom/cjs/react-dom.development.js
 var require_react_dom_development = __commonJS({
-  "../../chat-selection/node_modules/react-dom/cjs/react-dom.development.js"(exports) {
+  "node_modules/react-dom/cjs/react-dom.development.js"(exports) {
     "use strict";
     if (true) {
       (function() {
@@ -2391,9 +2391,9 @@ var require_react_dom_development = __commonJS({
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart === "function") {
           __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(new Error());
         }
-        var React6 = require_react();
+        var React7 = require_react();
         var Scheduler = require_scheduler();
-        var ReactSharedInternals = React6.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+        var ReactSharedInternals = React7.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
         var suppressWarning = false;
         function setSuppressWarning(newSuppressWarning) {
           {
@@ -2442,7 +2442,7 @@ var require_react_dom_development = __commonJS({
         var HostPortal = 4;
         var HostComponent = 5;
         var HostText = 6;
-        var Fragment2 = 7;
+        var Fragment3 = 7;
         var Mode = 8;
         var ContextConsumer = 9;
         var ContextProvider = 10;
@@ -3599,7 +3599,7 @@ var require_react_dom_development = __commonJS({
               return "DehydratedFragment";
             case ForwardRef:
               return getWrappedName$1(type, type.render, "ForwardRef");
-            case Fragment2:
+            case Fragment3:
               return "Fragment";
             case HostComponent:
               return type;
@@ -4000,7 +4000,7 @@ var require_react_dom_development = __commonJS({
           {
             if (props.value == null) {
               if (typeof props.children === "object" && props.children !== null) {
-                React6.Children.forEach(props.children, function(child) {
+                React7.Children.forEach(props.children, function(child) {
                   if (child == null) {
                     return;
                   }
@@ -12028,7 +12028,7 @@ var require_react_dom_development = __commonJS({
             }
           }
           function updateFragment2(returnFiber, current2, fragment, lanes, key) {
-            if (current2 === null || current2.tag !== Fragment2) {
+            if (current2 === null || current2.tag !== Fragment3) {
               var created = createFiberFromFragment(fragment, returnFiber.mode, lanes, key);
               created.return = returnFiber;
               return created;
@@ -12431,7 +12431,7 @@ var require_react_dom_development = __commonJS({
               if (child.key === key) {
                 var elementType = element.type;
                 if (elementType === REACT_FRAGMENT_TYPE) {
-                  if (child.tag === Fragment2) {
+                  if (child.tag === Fragment3) {
                     deleteRemainingChildren(returnFiber, child.sibling);
                     var existing = useFiber(child, element.props.children);
                     existing.return = returnFiber;
@@ -17907,7 +17907,7 @@ var require_react_dom_development = __commonJS({
               var _resolvedProps2 = workInProgress2.elementType === type ? _unresolvedProps2 : resolveDefaultProps(type, _unresolvedProps2);
               return updateForwardRef(current2, workInProgress2, type, _resolvedProps2, renderLanes2);
             }
-            case Fragment2:
+            case Fragment3:
               return updateFragment(current2, workInProgress2, renderLanes2);
             case Mode:
               return updateMode(current2, workInProgress2, renderLanes2);
@@ -18179,7 +18179,7 @@ var require_react_dom_development = __commonJS({
             case SimpleMemoComponent:
             case FunctionComponent:
             case ForwardRef:
-            case Fragment2:
+            case Fragment3:
             case Mode:
             case Profiler:
             case ContextConsumer:
@@ -22440,7 +22440,7 @@ var require_react_dom_development = __commonJS({
           return fiber;
         }
         function createFiberFromFragment(elements, mode, lanes, key) {
-          var fiber = createFiber(Fragment2, elements, key, mode);
+          var fiber = createFiber(Fragment3, elements, key, mode);
           fiber.lanes = lanes;
           return fiber;
         }
@@ -22617,7 +22617,7 @@ var require_react_dom_development = __commonJS({
           return root2;
         }
         var ReactVersion = "18.3.1";
-        function createPortal3(children, containerInfo, implementation) {
+        function createPortal4(children, containerInfo, implementation) {
           var key = arguments.length > 3 && arguments[3] !== void 0 ? arguments[3] : null;
           {
             checkKeyStringCoercion(key);
@@ -23474,7 +23474,7 @@ var require_react_dom_development = __commonJS({
           if (!isValidContainer(container)) {
             throw new Error("Target container is not a DOM element.");
           }
-          return createPortal3(children, container, null, key);
+          return createPortal4(children, container, null, key);
         }
         function renderSubtreeIntoContainer(parentComponent, element, containerNode, callback) {
           return unstable_renderSubtreeIntoContainer(parentComponent, element, containerNode, callback);
@@ -23545,9 +23545,9 @@ var require_react_dom_development = __commonJS({
   }
 });
 
-// ../../chat-selection/node_modules/react-dom/index.js
+// node_modules/react-dom/index.js
 var require_react_dom = __commonJS({
-  "../../chat-selection/node_modules/react-dom/index.js"(exports, module2) {
+  "node_modules/react-dom/index.js"(exports, module2) {
     "use strict";
     if (false) {
       checkDCE();
@@ -23558,9 +23558,9 @@ var require_react_dom = __commonJS({
   }
 });
 
-// ../../chat-selection/node_modules/react-dom/client.js
+// node_modules/react-dom/client.js
 var require_client = __commonJS({
-  "../../chat-selection/node_modules/react-dom/client.js"(exports) {
+  "node_modules/react-dom/client.js"(exports) {
     "use strict";
     var m = require_react_dom();
     if (false) {
@@ -23589,14 +23589,14 @@ var require_client = __commonJS({
   }
 });
 
-// ../../chat-selection/node_modules/react/cjs/react-jsx-runtime.development.js
+// node_modules/react/cjs/react-jsx-runtime.development.js
 var require_react_jsx_runtime_development = __commonJS({
-  "../../chat-selection/node_modules/react/cjs/react-jsx-runtime.development.js"(exports) {
+  "node_modules/react/cjs/react-jsx-runtime.development.js"(exports) {
     "use strict";
     if (true) {
       (function() {
         "use strict";
-        var React6 = require_react();
+        var React7 = require_react();
         var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.element");
         var REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal");
         var REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment");
@@ -23622,7 +23622,7 @@ var require_react_jsx_runtime_development = __commonJS({
           }
           return null;
         }
-        var ReactSharedInternals = React6.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+        var ReactSharedInternals = React7.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
         function error(format) {
           {
             {
@@ -24472,19 +24472,19 @@ var require_react_jsx_runtime_development = __commonJS({
             return jsxWithValidation(type, props, key, false);
           }
         }
-        var jsx5 = jsxWithValidationDynamic;
-        var jsxs5 = jsxWithValidationStatic;
+        var jsx6 = jsxWithValidationDynamic;
+        var jsxs6 = jsxWithValidationStatic;
         exports.Fragment = REACT_FRAGMENT_TYPE;
-        exports.jsx = jsx5;
-        exports.jsxs = jsxs5;
+        exports.jsx = jsx6;
+        exports.jsxs = jsxs6;
       })();
     }
   }
 });
 
-// ../../chat-selection/node_modules/react/jsx-runtime.js
+// node_modules/react/jsx-runtime.js
 var require_jsx_runtime = __commonJS({
-  "../../chat-selection/node_modules/react/jsx-runtime.js"(exports, module2) {
+  "node_modules/react/jsx-runtime.js"(exports, module2) {
     "use strict";
     if (false) {
       module2.exports = null;
@@ -24499,7 +24499,7 @@ var ui_entry_exports = {};
 __export(ui_entry_exports, {
   PetDock: () => PetDock,
   QuickActionsDock: () => QuickActionsDock,
-  React: () => React5,
+  React: () => React6,
   SettingsRow: () => SettingsRow,
   createRoot: () => import_client.createRoot,
   en: () => en,
@@ -24507,7 +24507,7 @@ __export(ui_entry_exports, {
   zh: () => zh
 });
 module.exports = __toCommonJS(ui_entry_exports);
-var React5 = __toESM(require_react(), 1);
+var React6 = __toESM(require_react(), 1);
 var import_client = __toESM(require_client(), 1);
 
 // src/client/pet.jsx
@@ -26172,14 +26172,15 @@ function SettingsRow({ t }) {
 }
 
 // src/client/quick-actions.jsx
-var React4 = __toESM(require_react(), 1);
-var import_react_dom2 = __toESM(require_react_dom(), 1);
+var React5 = __toESM(require_react(), 1);
+var import_react_dom3 = __toESM(require_react_dom(), 1);
 
 // src/client/quick-actions.js
 var QUICK_ACTIONS = [
   {
     id: "transcribe",
     icon: "mic",
+    sheet: "transcribe",
     zh: "\u5F55\u97F3\u8F6C\u5199",
     en: "Transcribe",
     prompt: { zh: "\u5E2E\u6211\u8F6C\u5199\u8FD9\u6BB5\u5F55\u97F3\uFF0C\u5E76\u6309\u8981\u70B9\u6574\u7406\u6210\u6E05\u5355\u3002", en: "Transcribe this recording and turn it into a list of key points." }
@@ -26194,6 +26195,7 @@ var QUICK_ACTIONS = [
   {
     id: "writing",
     icon: "pen",
+    sheet: "write",
     zh: "\u5E2E\u6211\u5199\u4F5C",
     en: "Writing",
     prompt: { zh: "\u5E2E\u6211\u5199\u4E00\u6BB5\u6587\u5B57\uFF0C\u4E3B\u9898\u662F\uFF1A", en: "Write a short piece about " }
@@ -26208,6 +26210,7 @@ var QUICK_ACTIONS = [
   {
     id: "read-video",
     icon: "film",
+    sheet: "video",
     zh: "\u89C6\u9891\u7406\u89E3",
     en: "Read video",
     prompt: {
@@ -26225,6 +26228,7 @@ var QUICK_ACTIONS = [
   {
     id: "slides",
     icon: "slides",
+    sheet: "deck",
     zh: "PPT \u751F\u6210",
     en: "Slides",
     prompt: { zh: "\u5E2E\u6211\u505A\u4E00\u4EFD PPT\uFF0C\u4E3B\u9898\u662F\uFF1A", en: "Build me a slide deck about " }
@@ -26234,8 +26238,388 @@ function pick(pair, locale) {
   return locale === "en" ? pair.en : pair.zh;
 }
 
-// src/client/quick-actions.jsx
+// src/client/quick-sheet.jsx
+var React4 = __toESM(require_react(), 1);
+var import_react_dom2 = __toESM(require_react_dom(), 1);
 var import_jsx_runtime4 = __toESM(require_jsx_runtime(), 1);
+var API = "/api/chatbox-pet";
+var GENRES = [
+  { id: "email", zh: "\u90AE\u4EF6", en: "Email" },
+  { id: "update", zh: "\u8FDB\u5C55\u66F4\u65B0", en: "Update" },
+  { id: "prd", zh: "PRD \u6458\u8981", en: "PRD" },
+  { id: "copy", zh: "\u4EA7\u54C1\u6587\u6848", en: "Copy" }
+];
+var SIZES = [
+  { id: 6, zh: "6 \u9875", en: "6 slides" },
+  { id: 10, zh: "10 \u9875", en: "10 slides" },
+  { id: 14, zh: "14 \u9875", en: "14 slides" }
+];
+async function postJson(path, body) {
+  const response = await fetch(`${API}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error(`\u670D\u52A1\u6CA1\u6709\u8FD4\u56DE JSON\uFF08HTTP ${response.status}\uFF09`);
+  }
+  if (payload?.ok !== true) throw new Error(payload?.error?.message ?? `\u8BF7\u6C42\u5931\u8D25\uFF08HTTP ${response.status}\uFF09`);
+  return payload.result;
+}
+function fillDraft(inputActions, text) {
+  if (typeof inputActions?.setDraft !== "function") return false;
+  try {
+    inputActions.setDraft({ text, references: [] });
+    return true;
+  } catch {
+    try {
+      inputActions.setDraft(text);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+function Sheet({ title, hint, onClose, children, t }) {
+  const ref = React4.useRef(null);
+  React4.useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+  return (0, import_react_dom2.createPortal)(
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-sheet-veil", "data-cbp-sheet": "true", onMouseDown: (event) => event.stopPropagation(), children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-sheet", role: "dialog", "aria-modal": "true", "aria-label": title, ref, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-sheet-head", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-sheet-title", children: title }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "cbp-sheet-close", "aria-label": t("sheet.close"), onClick: onClose, children: "\u2715" })
+      ] }),
+      hint ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "cbp-sheet-hint", children: hint }) : null,
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-sheet-body", children })
+    ] }) }),
+    document.body
+  );
+}
+function TranscribeSheet({ onClose, onFill, t, locale }) {
+  const [phase, setPhase] = React4.useState("idle");
+  const [seconds, setSeconds] = React4.useState(0);
+  const [result, setResult] = React4.useState(null);
+  const [error, setError] = React4.useState("");
+  const recorderRef = React4.useRef(null);
+  const chunksRef = React4.useRef([]);
+  const timerRef = React4.useRef(0);
+  const stopTimer = () => {
+    if (timerRef.current !== 0) {
+      clearInterval(timerRef.current);
+      timerRef.current = 0;
+    }
+  };
+  React4.useEffect(() => () => {
+    stopTimer();
+    try {
+      recorderRef.current?.stream?.getTracks?.().forEach((track) => track.stop());
+    } catch {
+    }
+  }, []);
+  const transcribe = async (blob) => {
+    setPhase("working");
+    setError("");
+    try {
+      const response = await fetch(`${API}/transcribe?name=recording.webm`, {
+        method: "POST",
+        headers: { "content-type": blob.type || "audio/webm" },
+        body: blob
+      });
+      const payload = await response.json();
+      if (payload?.ok !== true) throw new Error(payload?.error?.message ?? "\u8F6C\u5199\u5931\u8D25");
+      setResult(payload.result);
+      setPhase("done");
+    } catch (failure) {
+      setError(String(failure?.message ?? failure));
+      setPhase("idle");
+    }
+  };
+  const start = async () => {
+    setError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size > 0) chunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        stopTimer();
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        void transcribe(blob);
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setSeconds(0);
+      setPhase("recording");
+      timerRef.current = setInterval(() => setSeconds((value) => value + 1), 1e3);
+    } catch (failure) {
+      const denied = failure?.name === "NotAllowedError" || failure?.name === "SecurityError";
+      setError(denied ? t("sheet.transcribe.denied") : String(failure?.message ?? failure));
+    }
+  };
+  const stop = () => {
+    setPhase("working");
+    try {
+      recorderRef.current?.stop();
+    } catch {
+      stopTimer();
+      setPhase("idle");
+    }
+  };
+  const mmss = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(Sheet, { title: t("sheet.transcribe.title"), hint: t("sheet.transcribe.hint"), onClose, t, children: [
+    result === null ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-sheet-center", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "button",
+          {
+            type: "button",
+            className: "cbp-rec",
+            "data-cbp-rec": phase,
+            "aria-label": phase === "recording" ? t("sheet.transcribe.stop") : t("sheet.transcribe.start"),
+            onClick: phase === "recording" ? stop : start,
+            disabled: phase === "working",
+            children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-rec-dot" })
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-rec-time", children: phase === "recording" ? mmss : phase === "working" ? t("sheet.transcribe.working") : t("sheet.transcribe.idle") })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "cbp-sheet-file", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "input",
+          {
+            type: "file",
+            accept: "audio/*,video/*",
+            "data-cbp-audio-file": "true",
+            onChange: (event) => {
+              const file = event.target.files?.[0];
+              if (file) void transcribe(file);
+              event.target.value = "";
+            }
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: t("sheet.transcribe.pick") })
+      ] })
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-sheet-meta", children: t("sheet.transcribe.meta")(result.segments?.length ?? 0, result.language ?? "\u2014", result.durationSeconds ?? 0) }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("pre", { className: "cbp-sheet-pre", "data-cbp-transcript": "true", children: result.text || t("sheet.transcribe.empty") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-sheet-actions", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "cbp-btn cbp-btn-primary", onClick: () => onFill(result.text), children: t("sheet.fill") }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "cbp-btn", onClick: () => {
+          setResult(null);
+          setPhase("idle");
+        }, children: t("sheet.again") })
+      ] })
+    ] }),
+    error ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "cbp-sheet-error", children: error }) : null
+  ] });
+}
+function WriteSheet({ onClose, onFill, t, locale, sessionId = "" }) {
+  const [genre, setGenre] = React4.useState("update");
+  const [topic, setTopic] = React4.useState("");
+  const [tone, setTone] = React4.useState("");
+  const [phase, setPhase] = React4.useState("idle");
+  const [result, setResult] = React4.useState("");
+  const [error, setError] = React4.useState("");
+  const generate = async () => {
+    setPhase("working");
+    setError("");
+    try {
+      const result2 = await postJson("/write", { genre, topic, tone, locale: locale(), session: sessionId });
+      setResult(result2.text);
+      setPhase("done");
+    } catch (failure) {
+      setError(String(failure?.message ?? failure));
+      setPhase("idle");
+    }
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(Sheet, { title: t("sheet.write.title"), hint: t("sheet.write.hint"), onClose, t, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-chips", children: GENRES.map((item) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "button",
+      {
+        type: "button",
+        className: "cbp-chip",
+        "data-cbp-genre": item.id,
+        "aria-pressed": genre === item.id ? "true" : "false",
+        onClick: () => setGenre(item.id),
+        children: locale() === "en" ? item.en : item.zh
+      },
+      item.id
+    )) }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "input",
+      {
+        className: "cbp-input",
+        "data-cbp-write-topic": "true",
+        placeholder: t("sheet.write.topic"),
+        value: topic,
+        maxLength: 200,
+        onChange: (event) => setTopic(event.target.value)
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "input",
+      {
+        className: "cbp-input",
+        "data-cbp-write-tone": "true",
+        placeholder: t("sheet.write.tone"),
+        value: tone,
+        maxLength: 80,
+        onChange: (event) => setTone(event.target.value)
+      }
+    ),
+    result === "" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-sheet-actions", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "button",
+      {
+        type: "button",
+        className: "cbp-btn cbp-btn-primary",
+        "data-cbp-write-go": "true",
+        disabled: phase === "working" || topic.trim() === "",
+        onClick: generate,
+        children: phase === "working" ? t("sheet.working") : t("sheet.write.go")
+      }
+    ) }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("pre", { className: "cbp-sheet-pre", "data-cbp-written": "true", children: result }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-sheet-actions", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "cbp-btn cbp-btn-primary", onClick: () => onFill(result), children: t("sheet.fill") }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "cbp-btn", onClick: () => setResult(""), children: t("sheet.again") })
+      ] })
+    ] }),
+    error ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "cbp-sheet-error", children: error }) : null
+  ] });
+}
+function DeckSheet({ onClose, t, locale, sessionId = "" }) {
+  const [topic, setTopic] = React4.useState("");
+  const [audience, setAudience] = React4.useState("");
+  const [pages, setPages] = React4.useState(10);
+  const [phase, setPhase] = React4.useState("idle");
+  const [deck, setDeck] = React4.useState(null);
+  const [error, setError] = React4.useState("");
+  const generate = async () => {
+    setPhase("working");
+    setError("");
+    try {
+      const result = await postJson("/deck", { topic, audience, pages, locale: locale(), session: sessionId });
+      setDeck(result);
+      setPhase("done");
+    } catch (failure) {
+      setError(String(failure?.message ?? failure));
+      setPhase("idle");
+    }
+  };
+  const download = () => {
+    if (!deck?.base64) return;
+    const bytes = Uint8Array.from(atob(deck.base64), (char) => char.charCodeAt(0));
+    const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = deck.name || "deck.pptx";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4e3);
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(Sheet, { title: t("sheet.deck.title"), hint: t("sheet.deck.hint"), onClose, t, children: [
+    deck === null ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        "input",
+        {
+          className: "cbp-input",
+          "data-cbp-deck-topic": "true",
+          placeholder: t("sheet.deck.topic"),
+          value: topic,
+          maxLength: 200,
+          onChange: (event) => setTopic(event.target.value)
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        "input",
+        {
+          className: "cbp-input",
+          "data-cbp-deck-audience": "true",
+          placeholder: t("sheet.deck.audience"),
+          value: audience,
+          maxLength: 120,
+          onChange: (event) => setAudience(event.target.value)
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-chips", children: SIZES.map((size) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        "button",
+        {
+          type: "button",
+          className: "cbp-chip",
+          "data-cbp-size": size.id,
+          "aria-pressed": pages === size.id ? "true" : "false",
+          onClick: () => setPages(size.id),
+          children: locale() === "en" ? size.en : size.zh
+        },
+        size.id
+      )) }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-sheet-actions", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        "button",
+        {
+          type: "button",
+          className: "cbp-btn cbp-btn-primary",
+          "data-cbp-deck-go": "true",
+          disabled: phase === "working" || topic.trim() === "",
+          onClick: generate,
+          children: phase === "working" ? t("sheet.deck.working") : t("sheet.deck.go")
+        }
+      ) })
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-deck-card", "data-cbp-deck-result": "true", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-deck-title", children: deck.title || topic }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-deck-meta", children: t("sheet.deck.meta")(deck.slides ?? 0) }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-deck-path", title: deck.path, children: deck.path })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-sheet-actions", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "cbp-btn cbp-btn-primary", "data-cbp-deck-download": "true", onClick: download, children: t("sheet.deck.download") }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "cbp-btn", onClick: () => setDeck(null), children: t("sheet.again") })
+      ] })
+    ] }),
+    error ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "cbp-sheet-error", children: error }) : null
+  ] });
+}
+function VideoSheet({ onClose, onFill, t }) {
+  const [link, setLink] = React4.useState("");
+  const go = () => {
+    const clean = link.trim();
+    onFill(clean === "" ? t("sheet.video.prompt") : t("sheet.video.promptWith")(clean));
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(Sheet, { title: t("sheet.video.title"), hint: t("sheet.video.hint"), onClose, t, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      "input",
+      {
+        className: "cbp-input",
+        "data-cbp-video-link": "true",
+        placeholder: t("sheet.video.placeholder"),
+        value: link,
+        maxLength: 500,
+        onChange: (event) => setLink(event.target.value)
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-sheet-actions", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "cbp-btn cbp-btn-primary", "data-cbp-video-go": "true", onClick: go, children: t("sheet.video.go") }) })
+  ] });
+}
+
+// src/client/quick-actions.jsx
+var import_jsx_runtime5 = __toESM(require_jsx_runtime(), 1);
 function Icon({ name }) {
   const common = {
     width: 16,
@@ -26250,48 +26634,48 @@ function Icon({ name }) {
   };
   switch (name) {
     case "mic":
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...common, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x: "6", y: "2.2", width: "4", height: "7", rx: "2" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M4 7.6a4 4 0 0 0 8 0M8 11.6v2.2M6 13.8h4" })
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("svg", { ...common, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "6", y: "2.2", width: "4", height: "7", rx: "2" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { d: "M4 7.6a4 4 0 0 0 8 0M8 11.6v2.2M6 13.8h4" })
       ] });
     case "image":
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...common, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x: "2.2", y: "3.2", width: "11.6", height: "9.6", rx: "2" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("circle", { cx: "6", cy: "6.6", r: "1.2" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M2.8 11.4 6.4 8.2l2.4 2.1 1.9-1.6 2.3 2" })
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("svg", { ...common, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "2.2", y: "3.2", width: "11.6", height: "9.6", rx: "2" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("circle", { cx: "6", cy: "6.6", r: "1.2" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { d: "M2.8 11.4 6.4 8.2l2.4 2.1 1.9-1.6 2.3 2" })
       ] });
     case "pen":
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...common, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M3 13h2.4l7-7a1.7 1.7 0 0 0-2.4-2.4l-7 7V13Z" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M9.6 4.6 11.4 6.4" })
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("svg", { ...common, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { d: "M3 13h2.4l7-7a1.7 1.7 0 0 0-2.4-2.4l-7 7V13Z" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { d: "M9.6 4.6 11.4 6.4" })
       ] });
     case "video":
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...common, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x: "2.2", y: "4.2", width: "8.4", height: "7.6", rx: "2" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M10.6 7.4 13.8 5.6v4.8l-3.2-1.8Z" })
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("svg", { ...common, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "2.2", y: "4.2", width: "8.4", height: "7.6", rx: "2" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { d: "M10.6 7.4 13.8 5.6v4.8l-3.2-1.8Z" })
       ] });
     case "film":
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...common, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x: "2.2", y: "3.2", width: "11.6", height: "9.6", rx: "2" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M5.2 3.4v9.2M10.8 3.4v9.2M2.4 8h11.2" })
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("svg", { ...common, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "2.2", y: "3.2", width: "11.6", height: "9.6", rx: "2" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { d: "M5.2 3.4v9.2M10.8 3.4v9.2M2.4 8h11.2" })
       ] });
     case "music":
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...common, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M6 12.2V4.4l6-1.2v7.6" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("circle", { cx: "4.4", cy: "12.2", r: "1.7" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("circle", { cx: "10.4", cy: "10.8", r: "1.7" })
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("svg", { ...common, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { d: "M6 12.2V4.4l6-1.2v7.6" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("circle", { cx: "4.4", cy: "12.2", r: "1.7" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("circle", { cx: "10.4", cy: "10.8", r: "1.7" })
       ] });
     case "slides":
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...common, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x: "2.2", y: "3.2", width: "11.6", height: "7.4", rx: "1.8" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("path", { d: "M8 10.6v2.2M5.6 13.4h4.8" })
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("svg", { ...common, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "2.2", y: "3.2", width: "11.6", height: "7.4", rx: "1.8" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { d: "M8 10.6v2.2M5.6 13.4h4.8" })
       ] });
     default:
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("svg", { ...common, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x: "2.6", y: "2.6", width: "4.4", height: "4.4", rx: "1.2" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x: "9", y: "2.6", width: "4.4", height: "4.4", rx: "1.2" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x: "2.6", y: "9", width: "4.4", height: "4.4", rx: "1.2" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("rect", { x: "9", y: "9", width: "4.4", height: "4.4", rx: "1.2" })
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("svg", { ...common, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "2.6", y: "2.6", width: "4.4", height: "4.4", rx: "1.2" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "9", y: "2.6", width: "4.4", height: "4.4", rx: "1.2" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "2.6", y: "9", width: "4.4", height: "4.4", rx: "1.2" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "9", y: "9", width: "4.4", height: "4.4", rx: "1.2" })
       ] });
   }
 }
@@ -26303,17 +26687,18 @@ function findComposerCard() {
   }
   return document.querySelector('[data-composer-card="true"]');
 }
-function QuickActionsDock({ inputActions, t, locale }) {
+function QuickActionsDock({ inputActions, t, locale, sessionId = "" }) {
   const canWrite = typeof inputActions?.setDraft === "function";
-  const [open, setOpen] = React4.useState(false);
-  const [anchor, setAnchor] = React4.useState(null);
-  const buttonRef = React4.useRef(null);
-  const panelRef = React4.useRef(null);
-  const [card, setCard] = React4.useState(null);
-  React4.useEffect(() => {
+  const [open, setOpen] = React5.useState(false);
+  const [sheet, setSheet] = React5.useState(null);
+  const [anchor, setAnchor] = React5.useState(null);
+  const buttonRef = React5.useRef(null);
+  const panelRef = React5.useRef(null);
+  const [card, setCard] = React5.useState(null);
+  React5.useEffect(() => {
     setCard(findComposerCard());
   }, []);
-  const reposition = React4.useCallback(() => {
+  const reposition = React5.useCallback(() => {
     const rect = buttonRef.current?.getBoundingClientRect();
     if (rect === void 0 || rect === null) return;
     setAnchor({
@@ -26321,10 +26706,10 @@ function QuickActionsDock({ inputActions, t, locale }) {
       bottom: Math.max(8, Math.round(window.innerHeight - rect.top) + 8)
     });
   }, []);
-  React4.useLayoutEffect(() => {
+  React5.useLayoutEffect(() => {
     if (open) reposition();
   }, [open, reposition]);
-  React4.useEffect(() => {
+  React5.useEffect(() => {
     if (!open) return void 0;
     const onPointerDown = (event) => {
       const target = event.target;
@@ -26353,6 +26738,11 @@ function QuickActionsDock({ inputActions, t, locale }) {
     };
   }, [open]);
   const choose = (action) => {
+    if (typeof action.sheet === "string") {
+      setOpen(false);
+      setSheet(action.sheet);
+      return;
+    }
     const text = pick(action.prompt, typeof locale === "function" ? locale() : "zh");
     try {
       inputActions.setDraft({ text, references: [] });
@@ -26367,7 +26757,7 @@ function QuickActionsDock({ inputActions, t, locale }) {
   };
   const label = t("quick.label");
   const active = typeof locale === "function" ? locale() : "zh";
-  const pill = /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+  const pill = /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
     "button",
     {
       ref: buttonRef,
@@ -26382,13 +26772,13 @@ function QuickActionsDock({ inputActions, t, locale }) {
       onMouseDown: (event) => event.preventDefault(),
       onClick: () => setOpen((value) => !value),
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Icon, { name: "grid" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-more-label", children: label })
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Icon, { name: "grid" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "cbp-more-label", children: label })
       ]
     }
   );
-  const panel = open && anchor !== null ? (0, import_react_dom2.createPortal)(
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+  const panel = open && anchor !== null ? (0, import_react_dom3.createPortal)(
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
       "div",
       {
         ref: panelRef,
@@ -26398,11 +26788,11 @@ function QuickActionsDock({ inputActions, t, locale }) {
         "data-cbp-quick-panel": "true",
         style: { right: `${anchor.right}px`, bottom: `${anchor.bottom}px` },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "cbp-quick-head", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-title", children: t("quick.title") }),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-hint", children: t("quick.hint") })
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "cbp-quick-head", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "cbp-quick-title", children: t("quick.title") }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "cbp-quick-hint", children: t("quick.hint") })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "cbp-quick-grid", children: QUICK_ACTIONS.map((action) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "cbp-quick-grid", children: QUICK_ACTIONS.map((action) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
             "button",
             {
               type: "button",
@@ -26411,8 +26801,8 @@ function QuickActionsDock({ inputActions, t, locale }) {
               "data-cbp-action": action.id,
               onClick: () => choose(action),
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-icon", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Icon, { name: action.icon }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick-name", children: pick({ zh: action.zh, en: action.en }, active) })
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "cbp-quick-icon", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Icon, { name: action.icon }) }),
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "cbp-quick-name", children: pick({ zh: action.zh, en: action.en }, active) })
               ]
             },
             action.id
@@ -26422,10 +26812,18 @@ function QuickActionsDock({ inputActions, t, locale }) {
     ),
     document.body
   ) : null;
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "cbp-quick", style: { display: "none" }, "aria-hidden": "true" }),
-    card !== null ? (0, import_react_dom2.createPortal)(pill, card) : null,
-    panel
+  const finish = (text) => {
+    if (typeof text === "string" && text.trim() !== "") fillDraft(inputActions, text);
+    setSheet(null);
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "cbp-quick", style: { display: "none" }, "aria-hidden": "true" }),
+    card !== null ? (0, import_react_dom3.createPortal)(pill, card) : null,
+    panel,
+    sheet === "transcribe" ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(TranscribeSheet, { t, locale, onClose: () => setSheet(null), onFill: finish }) : null,
+    sheet === "write" ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(WriteSheet, { t, locale, sessionId, onClose: () => setSheet(null), onFill: finish }) : null,
+    sheet === "deck" ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(DeckSheet, { t, locale, sessionId, onClose: () => setSheet(null) }) : null,
+    sheet === "video" ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(VideoSheet, { t, onClose: () => setSheet(null), onFill: finish }) : null
   ] });
 }
 
@@ -26456,6 +26854,39 @@ var zh = {
   "quick.title": "\u5FEB\u6377\u529F\u80FD",
   "quick.hint": "\u70B9\u4E00\u4E0B\u628A\u6307\u4EE4\u586B\u5165\u8F93\u5165\u6846\uFF0C\u4E0D\u4F1A\u81EA\u52A8\u53D1\u9001",
   "quick.disabled": "\u5F53\u524D\u8F93\u5165\u6846\u8FD8\u4E0D\u80FD\u63A5\u6536\u6587\u5B57",
+  "sheet.close": "\u5173\u95ED",
+  "sheet.fill": "\u586B\u5165\u8F93\u5165\u6846",
+  "sheet.again": "\u518D\u6765\u4E00\u6B21",
+  "sheet.working": "\u6B63\u5728\u751F\u6210\u2026",
+  "sheet.transcribe.title": "\u5F55\u97F3\u8F6C\u5199",
+  "sheet.transcribe.hint": "\u5F55\u97F3\u53EA\u5728\u672C\u673A\u8F6C\u5199\uFF0C\u97F3\u9891\u4E0D\u4E0A\u4F20\u3002\u4E5F\u53EF\u4EE5\u76F4\u63A5\u9009\u4E00\u4E2A\u97F3\u9891\u6216\u89C6\u9891\u6587\u4EF6\u3002",
+  "sheet.transcribe.idle": "\u70B9\u4E00\u4E0B\u5F00\u59CB\u5F55\u97F3",
+  "sheet.transcribe.start": "\u5F00\u59CB\u5F55\u97F3",
+  "sheet.transcribe.stop": "\u505C\u6B62\u5E76\u8F6C\u5199",
+  "sheet.transcribe.working": "\u6B63\u5728\u8F6C\u5199\u2026",
+  "sheet.transcribe.pick": "\u6216\u9009\u62E9\u4E00\u4E2A\u97F3\u9891/\u89C6\u9891\u6587\u4EF6",
+  "sheet.transcribe.denied": "\u6D4F\u89C8\u5668\u6CA1\u6709\u9EA6\u514B\u98CE\u6743\u9650\uFF1A\u5728\u5730\u5740\u680F\u7684\u6743\u9650\u8BBE\u7F6E\u91CC\u5141\u8BB8\u9EA6\u514B\u98CE\uFF0C\u6216\u76F4\u63A5\u9009\u4E00\u4E2A\u97F3\u9891\u6587\u4EF6\u3002",
+  "sheet.transcribe.meta": (segments, language, duration) => `${segments} \u6BB5 \xB7 \u8BED\u8A00 ${language} \xB7 \u65F6\u957F ${Math.round(duration)} \u79D2`,
+  "sheet.transcribe.empty": "\uFF08\u6CA1\u6709\u8BC6\u522B\u5230\u8BED\u97F3\uFF09",
+  "sheet.write.title": "\u5E2E\u6211\u5199\u4F5C",
+  "sheet.write.hint": "\u5148\u5199\u4E3B\u9898\uFF0C\u6A21\u578B\u5199\u597D\u540E\u53EF\u4EE5\u6539\uFF0C\u518D\u81EA\u5DF1\u53D1\u9001\u3002",
+  "sheet.write.topic": "\u5199\u4EC0\u4E48\uFF1F\u4F8B\u5982\uFF1AQ2 \u6B27\u6D32\u672C\u5730\u652F\u4ED8\u65B9\u5F0F\u4E0A\u7EBF\u8FDB\u5C55",
+  "sheet.write.tone": "\u8BED\u6C14\uFF08\u53EF\u9009\uFF09\uFF1A\u7B80\u6D01\u3001\u6B63\u5F0F\u3001\u6709\u8BF4\u670D\u529B\u2026",
+  "sheet.write.go": "\u5199\u4E00\u7248",
+  "sheet.deck.title": "PPT \u751F\u6210",
+  "sheet.deck.hint": "\u7ED9\u4E00\u53E5\u4E3B\u9898\uFF0C\u6A21\u578B\u51FA\u5927\u7EB2\u3001\u672C\u673A\u6E32\u67D3\u6210 .pptx\uFF1B\u751F\u6210\u540E\u53EF\u4EE5\u4E0B\u8F7D\u3002",
+  "sheet.deck.topic": "\u4E3B\u9898\uFF0C\u4F8B\u5982\uFF1A\u652F\u4ED8\u4EA7\u54C1\u5B63\u5EA6\u590D\u76D8",
+  "sheet.deck.audience": "\u53D7\u4F17\uFF08\u53EF\u9009\uFF09\uFF1A\u7BA1\u7406\u5C42 / \u5BA2\u6237 / \u56E2\u961F",
+  "sheet.deck.go": "\u751F\u6210 PPT",
+  "sheet.deck.working": "\u6B63\u5728\u5199\u5927\u7EB2\u5E76\u6392\u7248\u2026",
+  "sheet.deck.meta": (slides) => `${slides} \u9875 \xB7 16:9 \xB7 \u53EF\u7F16\u8F91 PowerPoint`,
+  "sheet.deck.download": "\u4E0B\u8F7D .pptx",
+  "sheet.video.title": "\u89C6\u9891\u7406\u89E3",
+  "sheet.video.hint": "\u8D34\u4E00\u6761\u89C6\u9891\u94FE\u63A5\uFF0C\u6216\u5148\u628A\u89C6\u9891\u62D6\u8FDB\u8F93\u5165\u6846\u518D\u70B9\u4E0B\u9762\u7684\u6309\u94AE\u3002",
+  "sheet.video.placeholder": "YouTube / X / Bilibili \u94FE\u63A5\uFF08\u53EF\u7559\u7A7A\uFF09",
+  "sheet.video.go": "\u586B\u5165\u6307\u4EE4",
+  "sheet.video.prompt": "\u7528 video_read \u770B\u8FD9\u4E2A\u89C6\u9891\uFF0C\u603B\u7ED3\u5B83\u8BB2\u4E86\u4EC0\u4E48\u3001\u6709\u8C01\u5728\u8BF4\u8BDD\uFF0C\u5E76\u6309\u65F6\u95F4\u7801\u5217\u51FA\u5173\u952E\u7247\u6BB5\u3002",
+  "sheet.video.promptWith": (link) => `\u7528 video_read \u770B\u8FD9\u4E2A\u89C6\u9891\uFF1A${link}\u3002\u603B\u7ED3\u5B83\u8BB2\u4E86\u4EC0\u4E48\u3001\u6709\u8C01\u5728\u8BF4\u8BDD\uFF0C\u5E76\u6309\u65F6\u95F4\u7801\u5217\u51FA\u5173\u952E\u7247\u6BB5\u3002`,
   "merge.label": (n) => `\u5408\u5E76 ${n} \u6761\u6392\u961F\u6D88\u606F`,
   "merge.running": "\u6B63\u5728\u5408\u5E76\u2026",
   "merge.done": (n) => `\u5DF2\u628A ${n} \u6761\u5408\u5E76\u6210 1 \u6761`,
@@ -26490,6 +26921,39 @@ var en = {
   "quick.title": "Quick actions",
   "quick.hint": "Fills the composer \u2014 never sends on its own.",
   "quick.disabled": "This composer cannot take text yet",
+  "sheet.close": "Close",
+  "sheet.fill": "Put in composer",
+  "sheet.again": "Again",
+  "sheet.working": "Working\u2026",
+  "sheet.transcribe.title": "Transcribe audio",
+  "sheet.transcribe.hint": "Audio is transcribed on this machine and never uploaded. You can also pick an audio or video file.",
+  "sheet.transcribe.idle": "Click to record",
+  "sheet.transcribe.start": "Start recording",
+  "sheet.transcribe.stop": "Stop and transcribe",
+  "sheet.transcribe.working": "Transcribing\u2026",
+  "sheet.transcribe.pick": "or pick an audio/video file",
+  "sheet.transcribe.denied": "No microphone permission: allow it in the address bar, or pick an audio file instead.",
+  "sheet.transcribe.meta": (segments, language, duration) => `${segments} segments \xB7 ${language} \xB7 ${Math.round(duration)}s`,
+  "sheet.transcribe.empty": "(no speech detected)",
+  "sheet.write.title": "Write for me",
+  "sheet.write.hint": "Give it a topic; edit the draft, then send it yourself.",
+  "sheet.write.topic": "What to write? e.g. Q2 update on European local payment methods",
+  "sheet.write.tone": "Tone (optional): concise, formal, persuasive\u2026",
+  "sheet.write.go": "Write a draft",
+  "sheet.deck.title": "Generate slides",
+  "sheet.deck.hint": "One topic in, an outline from the model, a .pptx rendered here \u2014 then download it.",
+  "sheet.deck.topic": "Topic, e.g. Payment product quarterly review",
+  "sheet.deck.audience": "Audience (optional): leadership / customers / team",
+  "sheet.deck.go": "Generate deck",
+  "sheet.deck.working": "Outlining and laying out\u2026",
+  "sheet.deck.meta": (slides) => `${slides} slides \xB7 16:9 \xB7 editable PowerPoint`,
+  "sheet.deck.download": "Download .pptx",
+  "sheet.video.title": "Read a video",
+  "sheet.video.hint": "Paste a link, or drop the video into the composer first and then press the button.",
+  "sheet.video.placeholder": "YouTube / X / Bilibili link (optional)",
+  "sheet.video.go": "Fill the instruction",
+  "sheet.video.prompt": "Use video_read on this video: summarise what it says, who speaks, and list the key moments with timestamps.",
+  "sheet.video.promptWith": (link) => `Use video_read on this video: ${link}. Summarise what it says, who speaks, and list the key moments with timestamps.`,
   "merge.label": (n) => `Merge ${n} queued messages`,
   "merge.running": "Merging\u2026",
   "merge.done": (n) => `Merged ${n} into one`,

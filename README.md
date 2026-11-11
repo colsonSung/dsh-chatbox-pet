@@ -176,17 +176,31 @@ panel of shortcuts:
 
 | | |
 | --- | --- |
-| 录音转写 / Transcribe | transcribe the recording and list the key points |
-| 图像生成 / Image | generate an image |
-| 帮我写作 / Writing | write a short piece on a topic |
-| 视频生成 / Video | generate a short video |
-| 视频理解 / Read video | run `video_read` on this video |
-| 音乐生成 / Music | generate a short piece of music |
-| PPT 生成 / Slides | build a slide deck |
+| 录音转写 / Transcribe | **works**: record or pick a file → local transcription → composer |
+| 帮我写作 / Writing | **works**: genre + topic → the Host model writes a draft → composer |
+| PPT 生成 / Slides | **works**: topic + audience → model outline → .pptx rendered here → download |
+| 视频理解 / Read video | fills a ready-to-run `video_read` instruction for a link |
+| 图像生成 / Image | fills a prompt (needs an image model this machine does not have) |
+| 视频生成 / Video | fills a prompt (needs an external video service) |
+| 音乐生成 / Music | fills a prompt (needs a music model) |
 
-Choosing one **only writes the instruction into the composer** — nothing is sent,
-and no request is started until you press send. The catalogue is data: adding a
-shortcut is one object in `src/client/quick-actions.js`.
+The first four open a **workbench** and really do the work:
+
+- **Transcribe** records from the microphone or takes an audio/video file, runs
+  faster-whisper on this machine (ffmpeg for the conversion) and shows the
+  transcript with timestamps;
+- **Writing** asks the Host's configured model for a draft in one of four
+  genres;
+- **Slides** has the model write an outline and renders it with python-pptx into
+  a 16:9 editable .pptx, saved to `~/.dsh/chatbox-pet/decks/` (the newest 40 are
+  kept) and downloadable from the panel;
+- **Read video** prepares a `video_read` instruction for a pasted link.
+
+Nothing is sent for you: every result lands in the composer (or on disk) and you
+press send yourself. The last three shortcuts only fill a prompt — they need a
+model or a service this machine does not have, and saying so is better than
+faking it. The catalogue is data: adding a shortcut is one object in
+`src/client/quick-actions.js`.
 
 ## Asset rights
 

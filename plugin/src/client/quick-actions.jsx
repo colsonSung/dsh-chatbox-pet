@@ -19,6 +19,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 
 import { pick, QUICK_ACTIONS } from './quick-actions.js';
+import { DeckSheet, fillDraft, TranscribeSheet, VideoSheet, WriteSheet } from './quick-sheet.jsx';
 
 /**
  * One 16×16 glyph on a 1px stroke grid, matching the Host's composer icons.
@@ -127,9 +128,12 @@ function findComposerCard() {
  * @param {Function} props.locale - reads the active locale id.
  * @returns {object} the element.
  */
-export function QuickActionsDock({ inputActions, t, locale }) {
+export function QuickActionsDock({ inputActions, t, locale, sessionId = '' }) {
   const canWrite = typeof inputActions?.setDraft === 'function';
   const [open, setOpen] = React.useState(false);
+  // Which workbench is open, if any. Only shortcuts with a real capability
+  // behind them set this; the rest still just fill a prompt.
+  const [sheet, setSheet] = React.useState(null);
   // Fixed-position coordinates for the portal: right/bottom edges of the pill.
   const [anchor, setAnchor] = React.useState(null);
   const buttonRef = React.useRef(null);
@@ -196,6 +200,11 @@ export function QuickActionsDock({ inputActions, t, locale }) {
    * @returns {void}
    */
   const choose = (action) => {
+    if (typeof action.sheet === 'string') {
+      setOpen(false);
+      setSheet(action.sheet);
+      return;
+    }
     const text = pick(action.prompt, typeof locale === 'function' ? locale() : 'zh');
     try {
       inputActions.setDraft({ text, references: [] });
@@ -272,11 +281,27 @@ export function QuickActionsDock({ inputActions, t, locale }) {
 
   // The dock slot keeps a zero-height root so the seat is mounted even before
   // the composer card is found (hero composer mounts a tick later).
+  /**
+   * Close a workbench, writing its result into the composer when it has one.
+   * @param {string|null} text - the text to fill, or null to just close.
+   * @returns {void}
+   */
+  const finish = (text) => {
+    if (typeof text === 'string' && text.trim() !== '') fillDraft(inputActions, text);
+    setSheet(null);
+  };
+
   return (
     <>
       <span className="cbp-quick" style={{ display: 'none' }} aria-hidden="true" />
       {card !== null ? createPortal(pill, card) : null}
       {panel}
+      {sheet === 'transcribe' ? <TranscribeSheet t={t} locale={locale} onClose={() => setSheet(null)} onFill={finish} /> : null}
+      {sheet === 'write' ? (
+        <WriteSheet t={t} locale={locale} sessionId={sessionId} onClose={() => setSheet(null)} onFill={finish} />
+      ) : null}
+      {sheet === 'deck' ? <DeckSheet t={t} locale={locale} sessionId={sessionId} onClose={() => setSheet(null)} /> : null}
+      {sheet === 'video' ? <VideoSheet t={t} onClose={() => setSheet(null)} onFill={finish} /> : null}
     </>
   );
 }

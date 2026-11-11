@@ -25,6 +25,7 @@ import { QueueMergeButton } from './queue-merge.jsx';
 import { en as boostEn, NS as BOOST_NS, zh as boostZh } from './boost/locale.js';
 import { BoostDock } from './boost/panel.jsx';
 import { QUICK_CSS, QuickActionsDock } from './quick-actions.jsx';
+import { SHEET_CSS } from './quick-sheet.jsx';
 import { boostStore } from './boost/store.js';
 import { CSS as BOOST_CSS } from './boost/styles.js';
 
@@ -62,7 +63,7 @@ export function apply(ctx) {
     if (previous !== null) previous.remove();
     const style = document.createElement('style');
     style.setAttribute('data-plugin', 'chatbox-pet');
-    style.textContent = `${CSS}\n${BOOST_CSS}\n${SETTINGS_CSS}\n${QUICK_CSS}`;
+    style.textContent = `${CSS}\n${BOOST_CSS}\n${SETTINGS_CSS}\n${QUICK_CSS}\n${SHEET_CSS}`;
     document.head.appendChild(style);
     return () => {
       style.remove();
@@ -210,8 +211,16 @@ export function apply(ctx) {
         order: 2,
         label: () => t('quick.label'),
         locale: NS,
+        inject: (sessionId) => ({ sessionId }),
       },
-      (props) => <QuickActionsDock inputActions={props?.inputActions} t={t} locale={locale} />,
+      (props) => (
+        <QuickActionsDock
+          inputActions={props?.inputActions}
+          sessionId={typeof props?.sessionId === 'string' ? props.sessionId : ''}
+          t={t}
+          locale={locale}
+        />
+      ),
     ),
   );
 

@@ -13,6 +13,7 @@
  * @typedef {object} QuickAction
  * @property {string} id - stable key, also used as the DOM marker.
  * @property {'mic'|'image'|'pen'|'video'|'film'|'music'|'slides'} icon - glyph key.
+ * @property {'transcribe'|'write'|'deck'|'video'} [sheet] - open a workbench instead of only filling text.
  * @property {string} zh - Chinese label.
  * @property {string} en - English label.
  * @property {{zh: string, en: string}} prompt - what clicking it writes.
@@ -23,6 +24,7 @@ export const QUICK_ACTIONS = [
   {
     id: 'transcribe',
     icon: 'mic',
+    sheet: 'transcribe',
     zh: '录音转写',
     en: 'Transcribe',
     prompt: { zh: '帮我转写这段录音，并按要点整理成清单。', en: 'Transcribe this recording and turn it into a list of key points.' },
@@ -37,6 +39,7 @@ export const QUICK_ACTIONS = [
   {
     id: 'writing',
     icon: 'pen',
+    sheet: 'write',
     zh: '帮我写作',
     en: 'Writing',
     prompt: { zh: '帮我写一段文字，主题是：', en: 'Write a short piece about ' },
@@ -51,6 +54,7 @@ export const QUICK_ACTIONS = [
   {
     id: 'read-video',
     icon: 'film',
+    sheet: 'video',
     zh: '视频理解',
     en: 'Read video',
     prompt: {
@@ -68,6 +72,7 @@ export const QUICK_ACTIONS = [
   {
     id: 'slides',
     icon: 'slides',
+    sheet: 'deck',
     zh: 'PPT 生成',
     en: 'Slides',
     prompt: { zh: '帮我做一份 PPT，主题是：', en: 'Build me a slide deck about ' },
