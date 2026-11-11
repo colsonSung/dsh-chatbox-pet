@@ -74,6 +74,7 @@ writes only `pet` to the prefs file; the other two switches keep their state.
 | **Direct manipulation** | Right-click to make it say an exact line, replay a line it remembers, or play one of 17 actions. |
 | **Video reading** | A host tool — `video_read` — turns a video file or a link into a timestamped transcript with speaker labels, OCR'd on-screen subtitles and keyframes. Local only; see [Video reading](#video-reading). |
 | **Quick actions** | A glass "More" pill **inside** the composer's top-right corner opens a panel of shortcuts (transcribe, image, writing, video, read video, music, slides). A shortcut only fills the draft — it never sends. See [Quick actions](#quick-actions). |
+| **Translation page** | A sidebar "Translate" workspace: type, speak or drop a PDF/DOCX/TXT/MD/HTML, get a translation from your own model, and keep words and sentences in a favourite book with search and Markdown export. See [Translation](#translation). |
 
 ## Using it
 
@@ -201,6 +202,22 @@ press send yourself. The last three shortcuts only fill a prompt — they need a
 model or a service this machine does not have, and saying so is better than
 faking it. The catalogue is data: adding a shortcut is one object in
 `src/client/quick-actions.js`.
+
+## Translation
+
+The sidebar gets a **Translate** page: type text, record your voice, or drop a
+document, and a translation comes back in the panel — no third-party MT vendor,
+no extra key; it uses the model you already configured.
+
+| Input | What happens |
+| --- | --- |
+| Text | Translate with ⌘/Ctrl+Enter; eight target languages, source on auto-detect |
+| Voice | Record → transcribed on this machine → the text lands in the input |
+| File | PDF / DOCX / TXT / Markdown / HTML parsed locally, then translated as one document (30 MB / 60k chars cap) |
+
+The right column is the **favourite book**: every translation can be saved as a
+word or a sentence, filtered, searched, deleted and exported as Markdown. It lives
+in `~/.dsh/chatbox-pet/favorites.json`, so it survives a browser reset.
 
 ## Asset rights
 

@@ -28,6 +28,8 @@ import { resolveConfig, serviceOf } from './boost/config.js';
 import { mergeQueuedPrompts, optimizePrompt } from './boost/optimize.js';
 import { transcribeAudio } from './audio/transcribe.js';
 import { resolveModel } from './llm.js';
+import { extractDocument, translateText } from './translate/index.js';
+import { addFavorite, exportFavorites, listFavorites, removeFavorite } from './translate/favorites.js';
 import { buildDeck } from './deck/generate.js';
 import { draftText } from './write/draft.js';
 
@@ -46,6 +48,35 @@ export const QUIP_ROUTE = `${ROUTE_BASE}/quip`;
 export const TRANSCRIBE_ROUTE = `${ROUTE_BASE}/transcribe`;
 export const DECK_ROUTE = `${ROUTE_BASE}/deck`;
 export const WRITE_ROUTE = `${ROUTE_BASE}/write`;
+/** The translation page: text, documents and the favourite book. */
+export const TRANSLATE_ROUTE = `${ROUTE_BASE}/translate`;
+export const TRANSLATE_FILE_ROUTE = `${ROUTE_BASE}/translate/file`;
+export const FAVORITES_ROUTE = `${ROUTE_BASE}/favorites`;
+export const FAVORITES_EXPORT_ROUTE = `${ROUTE_BASE}/favorites/export`;
+
+/**
+ * Resolve the Session id a model call should ride on.
+ *
+ * The main-panel pages (translation) are not bound to a Session, while several
+ * providers route model calls per conversation — so a missing id falls back to
+ * the most recent live Session instead of failing the call.
+ * @param {any} ctx - the Host plugin context.
+ * @param {any} body - the request body.
+ * @returns {string|undefined} the Session id.
+ */
+function sessionIdFor(ctx, body) {
+  const explicit = typeof body?.session === 'string' ? body.session.trim() : '';
+  if (explicit !== '') return explicit;
+  try {
+    const sessions = serviceOf(ctx, 'sessions');
+    const list = typeof sessions?.list === 'function' ? sessions.list() : [];
+    const first = Array.isArray(list) ? list[0] : undefined;
+    const id = first?.id ?? first?.sessionId;
+    return typeof id === 'string' && id !== '' ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Register every route. Returns a disposer.
@@ -424,7 +455,7 @@ export function registerRoutes(ctx, config) {
               pages: body?.pages,
               points: body?.points,
               locale: body?.locale === 'en' ? 'en' : 'zh',
-              sessionId: typeof body?.session === 'string' ? body.session : undefined,
+              sessionId: sessionIdFor(ctx, body),
             });
             let base64 = '';
             try {
@@ -470,11 +501,111 @@ export function registerRoutes(ctx, config) {
               tone: body?.tone,
               points: body?.points,
               locale: body?.locale === 'en' ? 'en' : 'zh',
-              sessionId: typeof body?.session === 'string' ? body.session : undefined,
+              sessionId: sessionIdFor(ctx, body),
             });
             return Response.json({ ok: true, result });
           } catch (error) {
             return Response.json(failure('chatbox-pet/write-failed', messageOf(error)), { status: 200 });
+          }
+        },
+      });
+
+      // ---------------------------------------------------------- translate --
+      add({
+        path: TRANSLATE_ROUTE,
+        methods: ['POST'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          let body;
+          try {
+            body = await request.json();
+          } catch {
+            return Response.json(failure('chatbox-pet/bad-request', 'body is not JSON'), { status: 400 });
+          }
+          try {
+            const { provider, model } = resolveModel(ctx, config);
+            const result = await translateText({
+              llm: serviceOf(ctx, 'llm'),
+              provider,
+              model,
+              text: body?.text,
+              from: body?.from,
+              to: body?.to,
+              sessionId: sessionIdFor(ctx, body),
+            });
+            return Response.json({ ok: true, result });
+          } catch (error) {
+            return Response.json(failure('chatbox-pet/translate-failed', messageOf(error)), { status: 200 });
+          }
+        },
+      });
+
+      add({
+        path: TRANSLATE_FILE_ROUTE,
+        methods: ['POST'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          try {
+            const bytes = Buffer.from(await request.arrayBuffer());
+            const name = new URL(request.url).searchParams.get('name') ?? '';
+            const result = await extractDocument({ bytes, name });
+            return Response.json({ ok: true, result });
+          } catch (error) {
+            return Response.json(failure('chatbox-pet/extract-failed', messageOf(error)), { status: 200 });
+          }
+        },
+      });
+
+      add({
+        path: FAVORITES_ROUTE,
+        methods: ['GET', 'POST'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          try {
+            if (request.method === 'GET') {
+              const url = new URL(request.url);
+              const items = await listFavorites({
+                kind: url.searchParams.get('kind') ?? '',
+                search: url.searchParams.get('search') ?? '',
+              });
+              return Response.json({ ok: true, result: { items } });
+            }
+            let body;
+            try {
+              body = await request.json();
+            } catch {
+              return Response.json(failure('chatbox-pet/bad-request', 'body is not JSON'), { status: 400 });
+            }
+            if (body?.action === 'remove') {
+              const removed = await removeFavorite(String(body?.id ?? ''));
+              return Response.json({ ok: true, result: { removed } });
+            }
+            const item = await addFavorite({
+              kind: body?.kind,
+              source: body?.source,
+              target: body?.target,
+              from: body?.from,
+              to: body?.to,
+            });
+            return Response.json({ ok: true, result: { item } });
+          } catch (error) {
+            return Response.json(failure('chatbox-pet/favorites-failed', messageOf(error)), { status: 200 });
+          }
+        },
+      });
+
+      add({
+        path: FAVORITES_EXPORT_ROUTE,
+        methods: ['GET'],
+        requestBody: 'buffered',
+        fetch: async () => {
+          try {
+            const markdown = await exportFavorites();
+            return new Response(markdown, {
+              headers: { 'content-type': 'text/markdown; charset=utf-8', 'content-disposition': 'inline; filename="favorites.md"' },
+            });
+          } catch (error) {
+            return Response.json(failure('chatbox-pet/favorites-failed', messageOf(error)), { status: 200 });
           }
         },
       });
