@@ -12,8 +12,8 @@
 /**
  * @typedef {object} QuickAction
  * @property {string} id - stable key, also used as the DOM marker.
- * @property {'mic'|'image'|'pen'|'video'|'film'|'music'|'slides'} icon - glyph key.
- * @property {'transcribe'|'write'|'deck'|'video'} [sheet] - open a workbench instead of only filling text.
+ * @property {'mic'|'image'|'pen'|'video'|'film'|'music'|'slides'|'translate'} icon - glyph key.
+ * @property {'transcribe'|'write'|'deck'|'video'|'translate'} [sheet] - open a workbench instead of only filling text.
  * @property {string} zh - Chinese label.
  * @property {string} en - English label.
  * @property {{zh: string, en: string}} prompt - what clicking it writes.
@@ -68,6 +68,14 @@ export const QUICK_ACTIONS = [
     zh: '音乐生成',
     en: 'Music',
     prompt: { zh: '帮我生成一段音乐，风格是：', en: 'Generate a short piece of music in the style of ' },
+  },
+  {
+    id: 'translate',
+    icon: 'translate',
+    zh: '翻译',
+    en: 'Translate',
+    sheet: 'translate',
+    prompt: { zh: '帮我翻译：', en: 'Translate this: ' },
   },
   {
     id: 'slides',

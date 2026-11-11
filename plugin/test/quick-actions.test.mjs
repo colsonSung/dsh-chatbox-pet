@@ -97,7 +97,8 @@ test('the pill opens the catalogue; a workbench shortcut opens its sheet and wri
   await flush();
   const panel = document.querySelector('[data-cbp-quick-panel]');
   assert.ok(panel, 'the panel opens');
-  assert.equal(panel.querySelectorAll('[data-cbp-action]').length, 7, 'one item per shortcut');
+  assert.equal(panel.querySelectorAll('[data-cbp-action]').length, 8, 'one item per shortcut');
+  assert.ok(panel.querySelector('[data-cbp-action="translate"]'), 'the translation workbench is in the panel');
   assert.equal(writes.length, 0, 'opening the panel sends nothing');
 
   click(panel.querySelector('[data-cbp-action="transcribe"]'));
@@ -108,6 +109,16 @@ test('the pill opens the catalogue; a workbench shortcut opens its sheet and wri
   click(document.querySelector('.cbp-sheet-close'));
   await flush();
   assert.equal(document.querySelector('[data-cbp-sheet]'), null, 'the workbench closes');
+
+  // The translation entry opens its own workbench with the two views.
+  click(pill);
+  await flush();
+  click(document.querySelector('[data-cbp-action="translate"]'));
+  await flush();
+  assert.ok(document.querySelector('[data-cbt-view="translate"]'), 'the translation view opens');
+  assert.ok(document.querySelector('[data-cbt-source]'), 'it has a text input inside the panel');
+  click(document.querySelector('.cbp-sheet-close'));
+  await flush();
 
   // A prompt-only shortcut still behaves like before.
   click(pill);

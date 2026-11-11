@@ -26,7 +26,7 @@ import { en as boostEn, NS as BOOST_NS, zh as boostZh } from './boost/locale.js'
 import { BoostDock } from './boost/panel.jsx';
 import { QUICK_CSS, QuickActionsDock } from './quick-actions.jsx';
 import { SHEET_CSS } from './quick-sheet.jsx';
-import { TranslatePage, TRANSLATE_CSS } from './translate/page.jsx';
+import { TRANSLATE_CSS } from './translate/page.jsx';
 import { boostStore } from './boost/store.js';
 import { CSS as BOOST_CSS } from './boost/styles.js';
 
@@ -35,32 +35,6 @@ const PLUGIN_ID = '@local/chatbox-pet';
 
 /** Services the plugin reads. */
 export const inject = ['slots', 'locale'];
-
-/**
- * The sidebar glyph: a translation mark (character + latin letter), drawn on the
- * same 24 grid as the shell's own panel icons.
- * @param {object} props - `{ size, active }`.
- * @returns {object} the svg.
- */
-function TranslateIcon({ size = 18, active }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={active ? 1.9 : 1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3.5 6.2h8.2M7.6 6.2v1.4c0 3.1-1.7 5.6-4.1 6.7" />
-      <path d="M5.2 11.3c1 1.7 2.5 2.9 4.2 3.5" />
-      <path d="M13.2 18.4 16.6 9.6l3.4 8.8M14.5 15.6h4.2" />
-    </svg>
-  );
-}
 
 /**
  * Subscribe a component to the feature switches.
@@ -284,33 +258,6 @@ function BoostSessionBridge({ sessionId, session }) {
         inject: (sessionId) => ({ sessionId }),
       },
       (props) => React.createElement(BoostSessionBridge, { sessionId: props?.sessionId, session: props?.session }),
-    ),
-  );
-
-  // The translation page: one sidebar entry and the page it opens. The entry id
-  // and the main panel key must match — that pairing is how the shell knows
-  // which page a sidebar button belongs to.
-  const TRANSLATE_ID = 'chatbox-pet-translate';
-  ctx.slots.inject('sidebar.panellist', () =>
-    ctx.slots.register(
-      {
-        name: 'sidebar.panellist',
-        id: TRANSLATE_ID,
-        order: 23,
-        label: () => t('translate.sidebar'),
-        locale: NS,
-      },
-      TranslateIcon,
-    ),
-  );
-  ctx.slots.inject('main', () =>
-    ctx.slots.register(
-      {
-        name: 'main',
-        key: TRANSLATE_ID,
-        locale: NS,
-      },
-      (props) => <TranslatePage t={t} locale={locale} inputActions={props?.inputActions} />,
     ),
   );
 

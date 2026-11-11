@@ -20,6 +20,7 @@ import { createPortal } from 'react-dom';
 
 import { pick, QUICK_ACTIONS } from './quick-actions.js';
 import { DeckSheet, fillDraft, TranscribeSheet, VideoSheet, WriteSheet } from './quick-sheet.jsx';
+import { TranslateWorkbench } from './translate/page.jsx';
 
 /**
  * One 16×16 glyph on a 1px stroke grid, matching the Host's composer icons.
@@ -83,6 +84,14 @@ function Icon({ name }) {
           <circle cx="10.4" cy="10.8" r="1.7" />
         </svg>
       );
+    case 'translate':
+      return (
+        <svg {...common}>
+          <path d="M2.4 4.2h6M5.4 4.2v1.2c0 2.6-1.4 4.7-3.4 5.6" />
+          <path d="M3.9 8.4c.9 1.4 2.1 2.4 3.5 2.9" />
+          <path d="M9.4 13.6 11.6 8l2.2 5.6M10.2 11.9h2.8" />
+        </svg>
+      );
     case 'slides':
       return (
         <svg {...common}>
@@ -118,6 +127,30 @@ function findComposerCard() {
     if (card) return card;
   }
   return document.querySelector('[data-composer-card="true"]');
+}
+
+/**
+ * The translation workbench inside the panel's own sheet.
+ * @param {object} props - `{ t, locale, inputActions, onClose }`.
+ * @returns {object} the element.
+ */
+function TranslateSheet({ t, locale, inputActions, onClose }) {
+  return (
+    <div className="cbp-sheet-veil" data-cbp-sheet="true" onMouseDown={(event) => event.stopPropagation()}>
+      <div className="cbp-sheet cbp-sheet-wide" role="dialog" aria-modal="true" aria-label={t('sheet.translate.title')}>
+        <div className="cbp-sheet-head">
+          <span className="cbp-sheet-title">{t('sheet.translate.title')}</span>
+          <button type="button" className="cbp-sheet-close" aria-label={t('sheet.close')} onClick={onClose}>
+            ✕
+          </button>
+        </div>
+        <p className="cbp-sheet-hint">{t('sheet.translate.hint')}</p>
+        <div className="cbp-sheet-body">
+          <TranslateWorkbench t={t} locale={locale} inputActions={inputActions} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -302,6 +335,9 @@ export function QuickActionsDock({ inputActions, t, locale, sessionId = '' }) {
       ) : null}
       {sheet === 'deck' ? <DeckSheet t={t} locale={locale} sessionId={sessionId} onClose={() => setSheet(null)} /> : null}
       {sheet === 'video' ? <VideoSheet t={t} onClose={() => setSheet(null)} onFill={finish} /> : null}
+      {sheet === 'translate' ? (
+        <TranslateSheet t={t} locale={locale} inputActions={inputActions} onClose={() => setSheet(null)} />
+      ) : null}
     </>
   );
 }

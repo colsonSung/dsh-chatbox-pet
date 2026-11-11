@@ -486,6 +486,8 @@ export const SHEET_CSS = `
 .cbp-sheet{
   box-sizing:border-box;
   width:min(520px,100%);
+}
+.cbp-sheet{
   max-height:min(76vh,640px);
   overflow:auto;
   padding:18px 18px 16px;
@@ -689,6 +691,10 @@ body[data-ds-dark-theme] .cbp-sheet{
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
+}
+.cbp-sheet.cbp-sheet-wide{
+  width:min(660px,100%);
+  max-height:min(82vh,720px);
 }
 @media (prefers-reduced-motion: reduce){
   .cbp-sheet-veil,.cbp-sheet{animation:none}
