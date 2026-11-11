@@ -49,32 +49,68 @@ function escapeRegExp(value) {
 }
 
 /**
- * Render one example sentence with the headword marked.
+ * Render text with every latin word clickable, optionally marking the headword.
  *
- * The model writes the example itself, so the headword may appear inflected
- * (milestones, reached). A stem match covers the common suffixes without
- * pretending to be a lemmatiser.
- * @param {string} text - the example.
- * @param {string} word - the headword.
- * @returns {Array} React children, plain strings and <mark> elements.
+ * Used for examples and phrases: the reader should be able to jump into any
+ * word they do not know, not only the one they searched for. The headword is
+ * matched by stem, so "milestones" still marks "milestone".
+ * @param {string} text - the text to render.
+ * @param {Function} onPick - called with a clicked word.
+ * @param {string} [word] - the headword to mark, if any.
+ * @returns {Array} React children.
  */
-export function highlightTerm(text, word) {
+/** Words a reader would never look up; they stay plain text. */
+const PLAIN_WORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'but', 'if', 'to', 'of', 'in', 'on', 'at', 'for', 'with', 'by',
+  'is', 'are', 'was', 'were', 'be', 'been', 'being', 'am', 'it', 'its', 'this', 'that', 'these',
+  'those', 'i', 'you', 'he', 'she', 'we', 'they', 'them', 'his', 'her', 'their', 'our', 'my',
+  'as', 'so', 'than', 'then', 'there', 'here', 'not', 'no', 'do', 'does', 'did', 'has', 'have', 'had',
+]);
+
+/**
+ * Render text with every latin word clickable, optionally marking the headword.
+ * @param {string} text - the text to render.
+ * @param {Function} onPick - called with a clicked word.
+ * @param {string} [word] - the headword to mark, if any.
+ * @returns {Array} React children.
+ */
+export function renderLinked(text, onPick, word = '') {
   const source = String(text ?? '');
-  const head = String(word ?? '').trim();
-  if (head === '') return [source];
+  if (source === '') return [source];
+  const head = String(word ?? '').trim().toLowerCase();
   const stem = head.replace(/(e|y)$/i, '');
-  const pattern = new RegExp(`\\b${escapeRegExp(stem)}[a-z]{0,3}\\b`, 'gi');
   const out = [];
   let last = 0;
-  for (const match of source.matchAll(pattern)) {
+  let index = 0;
+  for (const match of source.matchAll(/[A-Za-z][A-Za-z'’-]{1,24}/g)) {
     const at = match.index ?? 0;
     if (at > last) out.push(source.slice(last, at));
-    out.push(
-      <mark className="cbt-mark" key={`${at}-${match[0]}`}>
-        {match[0]}
-      </mark>,
+    const raw = match[0];
+    const clean = raw.replace(/['’-]+$/, '');
+    const isHead =
+      head !== '' &&
+      stem !== '' &&
+      clean.toLowerCase().startsWith(stem) &&
+      clean.length - head.length <= 3;
+    index += 1;
+    if (!isHead && PLAIN_WORDS.has(clean.toLowerCase())) {
+      out.push(raw);
+      last = at + raw.length;
+      continue;
+    }
+    const button = (
+      <button
+        type="button"
+        className={isHead ? 'cbt-word cbt-word--head' : 'cbt-word'}
+        data-cbt-word={clean}
+        key={`${at}-${index}`}
+        onClick={() => onPick(clean)}
+      >
+        {raw}
+      </button>
     );
-    last = at + match[0].length;
+    out.push(isHead ? <mark className="cbt-mark" key={`m${at}`}>{button}</mark> : button);
+    last = at + raw.length;
   }
   if (last < source.length) out.push(source.slice(last));
   return out.length === 0 ? [source] : out;
@@ -160,6 +196,8 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
   // Where the current dictionary card came from: the input box or a word in the
   // translation. A card opened from the translation offers a way back.
   const [dictFrom, setDictFrom] = React.useState('');
+  // Cards visited while drilling into examples, so 返回 walks back one level.
+  const [dictHistory, setDictHistory] = React.useState([]);
   // Text the reader selected inside the translation, with its screen position.
   const [picked, setPicked] = React.useState(null);
   const [phase, setPhase] = React.useState('idle');
@@ -238,6 +276,7 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
     setDict(null);
     setExpand(null);
     setPicked(null);
+    setDictHistory([]);
     const mode = looksLikeWord(clean) ? 'dict' : 'sentence';
     // The dictionary explains in the *target* language, not the UI language:
     // an English UI translating into Chinese must still get Chinese senses.
@@ -400,6 +439,10 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
     setError('');
     setSaved(false);
     setPhase('working');
+    // Going deeper from an open card keeps it on the stack for the back link.
+    if (dict !== null && dict.word.toLowerCase() !== word.toLowerCase()) {
+      setDictHistory((history) => [...history, dict]);
+    }
     try {
       const result = await call('/translate', {
         method: 'POST',
@@ -422,8 +465,17 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
    * @returns {void}
    */
   const backToResult = () => {
+    if (dictHistory.length > 0) {
+      const previous = dictHistory[dictHistory.length - 1];
+      setDictHistory(dictHistory.slice(0, -1));
+      setDict(previous);
+      setExpand(null);
+      void loadExpand(previous.word);
+      return;
+    }
     setDict(null);
     setExpand(null);
+    setDictHistory([]);
     setDictFrom('');
   };
 
@@ -653,7 +705,10 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
             <div className="cbt-dict" data-cbt-dict="true">
               {dictFrom === 'result' ? (
                 <button type="button" className="cbt-back" data-cbt-back="true" onClick={backToResult}>
-                  ← {L('返回译文', 'Back to translation')}
+                  ←{' '}
+                  {dictHistory.length > 0
+                    ? `${L('返回', 'Back to')} ${dictHistory[dictHistory.length - 1].word}`
+                    : L('返回译文', 'Back to translation')}
                 </button>
               ) : null}
               <div className="cbt-dict-head">
@@ -687,7 +742,7 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
                     <span className="cbt-dict-meaning">{sense.meaning}</span>
                     {sense.example ? (
                       <div className="cbt-dict-example" data-cbt-example="true">
-                        {highlightTerm(sense.example, dict.word)}
+                        {renderLinked(sense.example, (word) => void lookupWordFromResult(word), dict.word)}
                       </div>
                     ) : null}
                   </li>
@@ -713,13 +768,41 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
                   {expand.synonyms.length > 0 ? (
                     <div className="cbt-dict-row">
                       <span className="cbt-dict-label">{L('近义', 'Synonyms')}</span>
-                      <span className="cbt-dict-words">{expand.synonyms.join(' · ')}</span>
+                      <span className="cbt-dict-words">
+                        {expand.synonyms.map((word, i) => (
+                          <React.Fragment key={word}>
+                            <button
+                              type="button"
+                              className="cbt-word cbt-word--rel"
+                              data-cbt-related={word}
+                              onClick={() => void lookupWordFromResult(word)}
+                            >
+                              {word}
+                            </button>
+                            {i < expand.synonyms.length - 1 ? <span className="cbt-sep"> · </span> : null}
+                          </React.Fragment>
+                        ))}
+                      </span>
                     </div>
                   ) : null}
                   {expand.antonyms.length > 0 ? (
                     <div className="cbt-dict-row">
                       <span className="cbt-dict-label">{L('反义', 'Antonyms')}</span>
-                      <span className="cbt-dict-words">{expand.antonyms.join(' · ')}</span>
+                      <span className="cbt-dict-words">
+                        {expand.antonyms.map((word, i) => (
+                          <React.Fragment key={word}>
+                            <button
+                              type="button"
+                              className="cbt-word cbt-word--rel"
+                              data-cbt-related={word}
+                              onClick={() => void lookupWordFromResult(word)}
+                            >
+                              {word}
+                            </button>
+                            {i < expand.antonyms.length - 1 ? <span className="cbt-sep"> · </span> : null}
+                          </React.Fragment>
+                        ))}
+                      </span>
                     </div>
                   ) : null}
                 </div>
@@ -731,7 +814,14 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
                   <ul className="cbt-dict-phrases">
                     {expand.phrases.map((phrase, index) => (
                       <li key={index}>
-                        <span className="cbt-dict-phrase-en">{phrase.en}</span>
+                        <button
+                          type="button"
+                          className="cbt-word cbt-word--phrase"
+                          data-cbt-phrase={phrase.en}
+                          onClick={() => void lookupWordFromResult(phrase.en)}
+                        >
+                          {phrase.en}
+                        </button>
                         {phrase.zh ? <span className="cbt-dict-phrase-zh">{phrase.zh}</span> : null}
                       </li>
                     ))}
@@ -947,6 +1037,11 @@ export const TRANSLATE_CSS = `
   background:color-mix(in oklab,#635BFF 14%,transparent);
   text-decoration-color:#635BFF;
 }
+/* Inside a <mark> the word inherits the highlight; no second underline. */
+.cbt-word--head{text-decoration:none;color:inherit;font-weight:500}
+.cbt-word--rel{text-decoration-color:color-mix(in oklab,#635BFF 30%,transparent)}
+.cbt-word--phrase{text-decoration-color:color-mix(in oklab,#635BFF 30%,transparent);font-size:12.5px}
+.cbt-sep{color:var(--dsw-alias-label-tertiary);text-decoration:none;pointer-events:none}
 .cbt-back{
   align-self:flex-start;
   padding:0 0 2px;

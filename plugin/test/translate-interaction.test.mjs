@@ -116,6 +116,10 @@ test('例句里的词条被 mark 标记', async () => {
   await flush();
   await flush();
   const marks = [...document.querySelectorAll('[data-cbt-example] mark')].map((node) => node.textContent);
+  const linked = [...document.querySelectorAll('[data-cbt-example] [data-cbt-word]')].map((node) => node.textContent);
+  assert.ok(linked.includes('team'), 'content words in the example are clickable');
+  assert.ok(!linked.includes('The'), 'stop words stay plain text');
+  assert.ok(!linked.includes('the'), 'stop words stay plain text');
   assert.deepEqual(marks, ['milestone'], 'the headword is marked inside the example');
   root.unmount();
 });
