@@ -75,8 +75,16 @@ export function fillDraft(inputActions, text) {
   }
 }
 
-/** The sheet shell: glass surface, title, body, and a footer line. */
-function Sheet({ title, hint, onClose, children, t }) {
+/**
+ * The sheet shell: glass surface, title, body, and a footer line.
+ *
+ * Every workbench uses this one shell — it portals to document.body, which is
+ * what makes `position:fixed` mean the viewport. Rendering a sheet inside the
+ * composer card instead puts the overlay *inside* the card's backdrop-filter
+ * containing block, and the panel then opens half off-screen (measured
+ * 2026-11-11).
+ */
+export function Sheet({ title, hint, onClose, children, t, wide = false }) {
   const ref = React.useRef(null);
   React.useEffect(() => {
     const onKey = (event) => {
@@ -92,7 +100,7 @@ function Sheet({ title, hint, onClose, children, t }) {
 
   return createPortal(
     <div className="cbp-sheet-veil" data-cbp-sheet="true" onMouseDown={(event) => event.stopPropagation()}>
-      <div className="cbp-sheet" role="dialog" aria-modal="true" aria-label={title} ref={ref}>
+      <div className={wide ? 'cbp-sheet cbp-sheet-wide' : 'cbp-sheet'} role="dialog" aria-modal="true" aria-label={title} ref={ref}>
         <div className="cbp-sheet-head">
           <span className="cbp-sheet-title">{title}</span>
           <button type="button" className="cbp-sheet-close" aria-label={t('sheet.close')} onClick={onClose}>

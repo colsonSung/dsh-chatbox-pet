@@ -19,7 +19,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 
 import { pick, QUICK_ACTIONS } from './quick-actions.js';
-import { DeckSheet, fillDraft, TranscribeSheet, VideoSheet, WriteSheet } from './quick-sheet.jsx';
+import { DeckSheet, fillDraft, Sheet, TranscribeSheet, VideoSheet, WriteSheet } from './quick-sheet.jsx';
 import { TranslateWorkbench } from './translate/page.jsx';
 
 /**
@@ -136,20 +136,9 @@ function findComposerCard() {
  */
 function TranslateSheet({ t, locale, inputActions, onClose }) {
   return (
-    <div className="cbp-sheet-veil" data-cbp-sheet="true" onMouseDown={(event) => event.stopPropagation()}>
-      <div className="cbp-sheet cbp-sheet-wide" role="dialog" aria-modal="true" aria-label={t('sheet.translate.title')}>
-        <div className="cbp-sheet-head">
-          <span className="cbp-sheet-title">{t('sheet.translate.title')}</span>
-          <button type="button" className="cbp-sheet-close" aria-label={t('sheet.close')} onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        <p className="cbp-sheet-hint">{t('sheet.translate.hint')}</p>
-        <div className="cbp-sheet-body">
-          <TranslateWorkbench t={t} locale={locale} inputActions={inputActions} />
-        </div>
-      </div>
-    </div>
+    <Sheet title={t('sheet.translate.title')} hint={t('sheet.translate.hint')} onClose={onClose} t={t} wide>
+      <TranslateWorkbench t={t} locale={locale} inputActions={inputActions} />
+    </Sheet>
   );
 }
 

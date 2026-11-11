@@ -1,6 +1,6 @@
 {
   "name": "dsh-chatbox-pet",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "private": true,
   "type": "module",
   "description": "A Pikachu companion pinned to the DeepSeek Harness composer: idle most of the time, it reacts to the agent's work state, talks back when you call it, and brings up things you wrote down.",

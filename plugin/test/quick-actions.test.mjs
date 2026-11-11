@@ -116,6 +116,11 @@ test('the pill opens the catalogue; a workbench shortcut opens its sheet and wri
   click(document.querySelector('[data-cbp-action="translate"]'));
   await flush();
   assert.ok(document.querySelector('[data-cbt-view="translate"]'), 'the translation view opens');
+  assert.equal(
+    document.querySelector('[data-cbp-sheet]')?.parentElement,
+    document.body,
+    'the sheet is portaled to document.body — inside the composer card it would anchor to the card, not the viewport',
+  );
   assert.ok(document.querySelector('[data-cbt-source]'), 'it has a text input inside the panel');
   click(document.querySelector('.cbp-sheet-close'));
   await flush();
