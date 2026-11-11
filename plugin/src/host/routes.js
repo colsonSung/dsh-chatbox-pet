@@ -30,6 +30,7 @@ import { transcribeAudio } from './audio/transcribe.js';
 import { resolveModel } from './llm.js';
 import { expandWord, extractDocument, lookupWord, translateText } from './translate/index.js';
 import { speak } from './translate/speak.js';
+import { assist } from './assist/index.js';
 import {
   addFavorite,
   countDue,
@@ -65,6 +66,8 @@ export const FAVORITES_ROUTE = `${ROUTE_BASE}/favorites`;
 export const TRANSLATE_ENGINE_ROUTE = `${ROUTE_BASE}/translate/engine`;
 /** Word pronunciation (local synth, cached on disk). */
 export const SPEAK_ROUTE = `${ROUTE_BASE}/speak`;
+/** The eight text assistants (polish, grammar, wiki, dedupe, write, reading, summarize, expand). */
+export const ASSIST_ROUTE = `${ROUTE_BASE}/assist`;
 export const FAVORITES_EXPORT_ROUTE = `${ROUTE_BASE}/favorites/export`;
 
 /**
@@ -608,6 +611,35 @@ export function registerRoutes(ctx, config) {
             });
           } catch {
             return Response.json({ ok: true, result: { local: false, baseUrl: '', model: '', models: [] } });
+          }
+        },
+      });
+
+      add({
+        path: ASSIST_ROUTE,
+        methods: ['POST'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          let body;
+          try {
+            body = await request.json();
+          } catch {
+            return Response.json(failure('chatbox-pet/bad-request', 'body is not JSON'), { status: 400 });
+          }
+          try {
+            const { provider, model } = resolveModel(ctx, config);
+            const result = await assist({
+              llm: serviceOf(ctx, 'llm'),
+              provider,
+              model,
+              task: String(body?.task ?? ''),
+              text: body?.text,
+              config,
+              sessionId: sessionIdFor(ctx, body),
+            });
+            return Response.json({ ok: true, result });
+          } catch (error) {
+            return Response.json(failure('chatbox-pet/assist-failed', messageOf(error)), { status: 200 });
           }
         },
       });

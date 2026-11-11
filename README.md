@@ -219,6 +219,10 @@ vendor, no extra key; it uses the model you already configured.
 | Voice | Record → transcribed on this machine → the text lands in the input |
 | File | PDF / DOCX / TXT / Markdown / HTML parsed locally, then translated as one document (30 MB / 60k chars cap) |
 
+Above the input sits a row of eight text assistants — polish, grammar check, word
+wiki, de-duplicate, write, reading help, key points and expand. Rewriting runs on
+the local model (1-6 s); analysis runs on the Host model (3-7 s).
+
 Saved words can be reviewed: the bookmark book opens a card review (word on the
 front, meaning on the back, grade Again / Hard / Good) scheduled with a
 simplified SM-2. Pronunciation prefers the studio voice of the local Kokoro

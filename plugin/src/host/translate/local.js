@@ -48,7 +48,7 @@ export function localSettings(config) {
  * @param {AbortSignal} [options.signal] - cancellation.
  * @returns {Promise<string>} the answer text.
  */
-async function chat({ baseUrl, model, messages, maxTokens = 700, signal }) {
+export async function chat({ baseUrl, model, messages, maxTokens = 700, signal }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const onAbort = () => controller.abort();

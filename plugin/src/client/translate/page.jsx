@@ -59,6 +59,18 @@ function escapeRegExp(value) {
  * @param {string} [word] - the headword to mark, if any.
  * @returns {Array} React children.
  */
+/** The eight text assistants, mirroring src/host/assist/index.js. */
+export const ASSIST = [
+  { id: 'polish', zh: '句子润色', en: 'Polish' },
+  { id: 'grammar', zh: '语法纠错', en: 'Grammar' },
+  { id: 'wiki', zh: '单词百科', en: 'Word wiki' },
+  { id: 'dedupe', zh: '论文去重', en: 'De-duplicate' },
+  { id: 'write', zh: '帮我写作', en: 'Write' },
+  { id: 'reading', zh: '阅读助手', en: 'Reading help' },
+  { id: 'summarize', zh: '重点提炼', en: 'Key points' },
+  { id: 'expand', zh: '内容扩写', en: 'Expand' },
+];
+
 /** Chinese function words: segmenting splits them out, nobody looks them up. */
 const PLAIN_CJK = new Set([
   '的', '了', '是', '在', '和', '与', '也', '就', '都', '而', '及', '其', '之', '着', '过',
@@ -220,6 +232,10 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
   const [dictHistory, setDictHistory] = React.useState([]);
   // Text the reader selected inside the translation, with its screen position.
   const [picked, setPicked] = React.useState(null);
+  // The text-assistant result (polish / grammar / wiki / ...), shown above the
+  // translation result when present.
+  const [assist, setAssist] = React.useState(null);
+  const [assistBusy, setAssistBusy] = React.useState('');
   const [phase, setPhase] = React.useState('idle');
   const [error, setError] = React.useState('');
   const [docName, setDocName] = React.useState('');
@@ -576,6 +592,33 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
   };
 
   /**
+   * Run one text assistant on the current input.
+   * @param {string} task - one of the ASSIST ids.
+   * @returns {Promise<void>} resolves when the result arrives.
+   */
+  const runAssist = async (task) => {
+    const value = source.trim();
+    if (value === '') {
+      setError(L('先在输入框里写点内容', 'Type something first'));
+      return;
+    }
+    setError('');
+    setAssistBusy(task);
+    try {
+      const result = await call('/assist', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ task, text: value }),
+      });
+      setAssist({ task, ...result });
+    } catch (failure) {
+      setError(String(failure?.message ?? failure));
+    } finally {
+      setAssistBusy('');
+    }
+  };
+
+  /**
    * Open a review session with the cards that are due now.
    * @returns {Promise<void>} resolves when the session starts.
    */
@@ -714,6 +757,22 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="cbt-assist-bar" data-cbt-assist-bar="true">
+            {ASSIST.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="cbt-assist"
+                data-cbt-assist={item.id}
+                aria-busy={assistBusy === item.id ? 'true' : 'false'}
+                disabled={assistBusy !== ''}
+                onClick={() => void runAssist(item.id)}
+              >
+                {assistBusy === item.id ? '…' : zh ? item.zh : item.en}
+              </button>
+            ))}
           </div>
 
           {tab === 'text' ? (
@@ -984,6 +1043,35 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
             </div>
           ) : null}
 
+          {assist !== null ? (
+            <div className="cbt-assist-result" data-cbt-assist-result="true">
+              <div className="cbt-assist-head">
+                <span className="cbt-assist-title">
+                  {(ASSIST.find((item) => item.id === assist.task) ?? {})[zh ? 'zh' : 'en']}
+                </span>
+                <span className="cbt-assist-meta">
+                  {assist.engine === 'local' ? L('本机', 'Local') : L('宿主模型', 'Host')} · {assist.ms} ms
+                </span>
+                <span className="cbt-spacer" />
+                <button type="button" className="cbt-link" data-cbt-assist-copy="true" onClick={() => void copy(assist.text)}>
+                  {L('复制', 'Copy')}
+                </button>
+                <button
+                  type="button"
+                  className="cbt-link"
+                  data-cbt-assist-close="true"
+                  onClick={() => setAssist(null)}
+                  aria-label={L('关闭', 'Close')}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="cbt-assist-text" data-cbt-assist-text="true">
+                {assist.text}
+              </div>
+            </div>
+          ) : null}
+
           <div className="cbt-engine" data-cbt-engine="true">
             {engine === null
               ? ''
@@ -1173,6 +1261,26 @@ export const TRANSLATE_CSS = `
 .cbt-pick:hover{background:color-mix(in oklab,#635BFF 26%,var(--dsw-alias-bg-overlay,#fff))}
 .cbt-error{margin:0;color:#e5484d;font-size:11.5px;line-height:1.5}
 .cbt-engine{margin-top:-4px;color:var(--dsw-alias-label-tertiary);font-size:10.5px;line-height:1.5}
+.cbt-assist-bar{display:flex;gap:5px;flex-wrap:wrap}
+.cbt-assist{
+  height:24px;padding:0 10px;border-radius:999px;cursor:pointer;
+  border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 11%,transparent);
+  background:color-mix(in oklab,var(--dsw-alias-label-primary) 4%,transparent);
+  color:var(--dsw-alias-label-secondary);font-size:11.5px;white-space:nowrap;
+}
+.cbt-assist:hover{background:color-mix(in oklab,#635BFF 12%,transparent);border-color:color-mix(in oklab,#635BFF 35%,transparent);color:var(--dsw-alias-label-primary)}
+.cbt-assist[aria-busy="true"]{opacity:.75}
+.cbt-assist:disabled{cursor:default;opacity:.5}
+.cbt-assist-result{
+  padding:12px;border-radius:12px;display:flex;flex-direction:column;gap:8px;
+  border:1px solid color-mix(in oklab,#635BFF 26%,transparent);
+  background:color-mix(in oklab,#635BFF 7%,transparent);
+  max-height:240px;overflow:auto;
+}
+.cbt-assist-head{display:flex;align-items:center;gap:8px;font-size:11.5px}
+.cbt-assist-title{font-weight:600;color:var(--dsw-alias-label-primary)}
+.cbt-assist-meta{color:var(--dsw-alias-label-tertiary);font-size:10.5px}
+.cbt-assist-text{font-size:12.5px;line-height:1.65;white-space:pre-wrap;color:var(--dsw-alias-label-primary)}
 .cbt-review{display:flex;flex-direction:column;gap:12px;padding:4px 0}
 .cbt-review-head{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--dsw-alias-label-tertiary)}
 .cbt-review-progress{font-variant-numeric:tabular-nums}
