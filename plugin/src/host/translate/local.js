@@ -160,6 +160,87 @@ export async function lookupLocal({ settings, word, locale, signal }) {
 }
 
 /**
+ * Ask the local model for the word's family: synonyms, antonyms, forms, phrases
+ * and a memory hook.
+ *
+ * The answer is line-oriented on purpose. A JSON object with five arrays is
+ * where a 7B model starts mis-quoting (measured: unbalanced quotes around the
+ * antonyms); "PREFIX: a | b | c" survives that, and a missing line is simply an
+ * empty section instead of a parse failure.
+ * @param {object} options - the call.
+ * @param {object} options.settings - from localSettings().
+ * @param {string} options.word - the headword.
+ * @param {AbortSignal} [options.signal] - cancellation.
+ * @returns {Promise<object>} `{ synonyms, antonyms, forms, phrases, mnemonic }`.
+ */
+export async function expandLocal({ settings, word, signal }) {
+  const user = [
+    `词条：${word}`,
+    '',
+    '按下面五行输出，每行一个前缀，用 | 分隔多项。没有内容的行留空前缀（例如 "ANT:"）：',
+    'SYN: 英文近义词，最多 5 个',
+    'ANT: 英文反义词，最多 5 个',
+    'FORM: 该词真实存在的词形，格式 "标签 值"，如 "复数 words"、"过去式 worked"、"比较级 more accurate"',
+    'PHRASE: 常见搭配，格式 "英文 = 中文释义"，最多 5 个',
+    'MNE: 一句中文记忆提示',
+    '',
+    '只输出这五行，不要解释。',
+  ].join('\n');
+  const answer = await chat({ baseUrl: settings.baseUrl, model: settings.model, messages: [{ role: 'user', content: user }], maxTokens: 600, signal });
+  return parseExpansion(answer, word);
+}
+
+/**
+ * Parse the five-line expansion answer.
+ * @param {string} raw - the model's answer.
+ * @param {string} [word] - the headword, used to drop forms that just repeat it.
+ * @returns {{synonyms: string[], antonyms: string[], forms: Array<{label: string, value: string}>, phrases: Array<{en: string, zh: string}>, mnemonic: string}} the sections.
+ */
+export function parseExpansion(raw, word = '') {
+  const sections = { synonyms: [], antonyms: [], forms: [], phrases: [], mnemonic: '' };
+  for (const line of String(raw ?? '').split('\n')) {
+    const match = /^\s*(SYN|ANT|FORM|PHRASE|MNE)\s*[:：]\s*(.*)$/i.exec(line);
+    if (match === null) continue;
+    const kind = match[1].toUpperCase();
+    const body = match[2].trim();
+    if (body === '') continue;
+    const parts = body.split(/\s*[|｜]\s*/).map((part) => part.trim()).filter(Boolean);
+    if (kind === 'MNE') {
+      sections.mnemonic = body.slice(0, 200);
+      continue;
+    }
+    if (kind === 'SYN' || kind === 'ANT') {
+      const list = parts.map((part) => part.replace(/^["'\[]|[\]"']$/g, '').trim()).filter((part) => /^[a-zA-Z][a-zA-Z' -]*$/.test(part));
+      sections[kind === 'SYN' ? 'synonyms' : 'antonyms'] = list.slice(0, 5);
+      continue;
+    }
+    if (kind === 'FORM') {
+      sections.forms = parts
+        .map((part) => {
+          const pieces = part.split(/\s+/);
+          if (pieces.length < 2) return null;
+          return { label: pieces[0].slice(0, 12), value: pieces.slice(1).join(' ').slice(0, 40) };
+        })
+        // "形容词 accurate" names the headword itself; that is not a form.
+        .filter((form) => form !== null && form.value.trim().toLowerCase() !== String(word ?? '').trim().toLowerCase())
+        .slice(0, 6);
+      continue;
+    }
+    if (kind === 'PHRASE') {
+      sections.phrases = parts
+        .map((part) => {
+          const [en, zh] = part.split(/\s*=\s*/);
+          if (typeof en !== 'string' || en.trim() === '') return null;
+          return { en: en.trim().slice(0, 60), zh: (zh ?? '').trim().slice(0, 60) };
+        })
+        .filter(Boolean)
+        .slice(0, 5);
+    }
+  }
+  return sections;
+}
+
+/**
  * Strip the wrappers a chat model sometimes adds around a translation.
  * @param {string} raw - the model's answer.
  * @returns {string} the translation body.

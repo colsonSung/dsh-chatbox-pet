@@ -211,7 +211,7 @@ vendor, no extra key; it uses the model you already configured.
 
 | Input | What happens |
 | --- | --- |
-| Text | Translate with ⌘/Ctrl+Enter; eight target languages, source on auto-detect — a single word returns a **dictionary card** (phonetic, senses, examples, usage note) |
+| Text | Translate with ⌘/Ctrl+Enter; eight target languages, source on auto-detect — a single word returns a **dictionary card**: US/UK pronunciation, phonetic, senses with examples, word forms, synonyms/antonyms, phrases and a memory hook |
 | Voice | Record → transcribed on this machine → the text lands in the input |
 | File | PDF / DOCX / TXT / Markdown / HTML parsed locally, then translated as one document (30 MB / 60k chars cap) |
 

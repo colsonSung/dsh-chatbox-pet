@@ -20,7 +20,7 @@ import { promisify } from 'node:util';
 
 import { aiError, complete } from '../llm.js';
 import { pythonPath } from '../deck/generate.js';
-import { localSettings, lookupLocal, parseDictionary, translateLocal } from './local.js';
+import { expandLocal, localSettings, lookupLocal, parseDictionary, parseExpansion, translateLocal } from './local.js';
 
 const run = promisify(execFile);
 
@@ -161,6 +161,59 @@ export async function lookupWord({ llm, provider, model, word, locale = 'zh', co
     signal,
   });
   return { dict: parseDictionary(answer, headword), engine: 'host', ms: Date.now() - started };
+}
+
+/**
+ * Expand one headword: synonyms, antonyms, word forms, phrases, memory hook.
+ * @param {object} input - the request.
+ * @param {any} input.llm - the Host llm service.
+ * @param {string} input.provider - resolved provider id.
+ * @param {string} input.model - resolved model id.
+ * @param {string} input.word - the headword.
+ * @param {object} [input.config] - plugin row config.
+ * @param {string} [input.sessionId] - Session id.
+ * @param {AbortSignal} [input.signal] - cancellation.
+ * @returns {Promise<object>} `{ expand, engine, ms }`.
+ */
+export async function expandWord({ llm, provider, model, word, config, sessionId, signal }) {
+  const headword = typeof word === 'string' ? word.trim() : '';
+  if (headword === '') throw aiError('先输入要扩词的单词');
+  if (headword.length > 60) throw aiError('这个词太长了');
+  const settings = localSettings(config);
+
+  if (settings.enabled) {
+    const started = Date.now();
+    try {
+      const expand = await expandLocal({ settings, word: headword, signal });
+      if (expand.synonyms.length + expand.antonyms.length + expand.forms.length + expand.phrases.length > 0) {
+        return { expand, engine: 'local', ms: Date.now() - started };
+      }
+    } catch {
+      // fall through to the Host model
+    }
+  }
+
+  const started = Date.now();
+  const answer = await complete({
+    llm,
+    provider,
+    model,
+    system: '你是英汉词典编辑，只输出规定格式的五行，不要解释。',
+    user: [
+      `词条：${headword}`,
+      '',
+      '按下面五行输出，用 | 分隔多项，没有内容就留空：',
+      'SYN: 英文近义词，最多 5 个',
+      'ANT: 英文反义词，最多 5 个',
+      'FORM: 词形，"标签 值"，如 "复数 words"',
+      'PHRASE: 搭配，"英文 = 中文"',
+      'MNE: 一句中文记忆提示',
+    ].join('\n'),
+    maxTokens: 600,
+    sessionId,
+    signal,
+  });
+  return { expand: parseExpansion(answer), engine: 'host', ms: Date.now() - started };
 }
 
 /**

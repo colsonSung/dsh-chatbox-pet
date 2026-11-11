@@ -709,7 +709,7 @@ body[data-ds-dark-theme] .cbp-sheet{
 }
 .cbp-sheet.cbp-sheet-wide{
   width:min(660px,100%);
-  max-height:min(74vh,600px);
+  max-height:min(84vh,720px);
 }
 @media (prefers-reduced-motion: reduce){
   .cbp-sheet-veil,.cbp-sheet{animation:none}

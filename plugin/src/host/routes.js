@@ -28,7 +28,8 @@ import { resolveConfig, serviceOf } from './boost/config.js';
 import { mergeQueuedPrompts, optimizePrompt } from './boost/optimize.js';
 import { transcribeAudio } from './audio/transcribe.js';
 import { resolveModel } from './llm.js';
-import { extractDocument, lookupWord, translateText } from './translate/index.js';
+import { expandWord, extractDocument, lookupWord, translateText } from './translate/index.js';
+import { speak } from './translate/speak.js';
 import { addFavorite, exportFavorites, listFavorites, removeFavorite } from './translate/favorites.js';
 import { localSettings, probeLocal } from './translate/local.js';
 import { buildDeck } from './deck/generate.js';
@@ -54,6 +55,8 @@ export const TRANSLATE_ROUTE = `${ROUTE_BASE}/translate`;
 export const TRANSLATE_FILE_ROUTE = `${ROUTE_BASE}/translate/file`;
 export const FAVORITES_ROUTE = `${ROUTE_BASE}/favorites`;
 export const TRANSLATE_ENGINE_ROUTE = `${ROUTE_BASE}/translate/engine`;
+/** Word pronunciation (local synth, cached on disk). */
+export const SPEAK_ROUTE = `${ROUTE_BASE}/speak`;
 export const FAVORITES_EXPORT_ROUTE = `${ROUTE_BASE}/favorites/export`;
 
 /**
@@ -527,6 +530,17 @@ export function registerRoutes(ctx, config) {
           try {
             const { provider, model } = resolveModel(ctx, config);
             // A headword gets the dictionary shape; a sentence gets a translation.
+            if (body?.mode === 'expand') {
+              const result = await expandWord({
+                llm: serviceOf(ctx, 'llm'),
+                provider,
+                model,
+                word: body?.text,
+                config,
+                sessionId: sessionIdFor(ctx, body),
+              });
+              return Response.json({ ok: true, result });
+            }
             if (body?.mode === 'dict') {
               const result = await lookupWord({
                 llm: serviceOf(ctx, 'llm'),
@@ -586,6 +600,39 @@ export function registerRoutes(ctx, config) {
             });
           } catch {
             return Response.json({ ok: true, result: { local: false, baseUrl: '', model: '', models: [] } });
+          }
+        },
+      });
+
+      add({
+        path: SPEAK_ROUTE,
+        methods: ['POST'],
+        requestBody: 'buffered',
+        fetch: async (request) => {
+          let body;
+          try {
+            body = await request.json();
+          } catch {
+            return Response.json(failure('chatbox-pet/bad-request', 'body is not JSON'), { status: 400 });
+          }
+          try {
+            const clip = await speak({
+              text: body?.text,
+              accent: typeof body?.accent === 'string' ? body.accent : 'en-US',
+            });
+            const bytes = await readFile(clip.path);
+            return Response.json({
+              ok: true,
+              result: {
+                accent: clip.accent,
+                voice: clip.voice,
+                cached: clip.cached,
+                mime: 'audio/mp4',
+                base64: bytes.toString('base64'),
+              },
+            });
+          } catch (error) {
+            return Response.json(failure('chatbox-pet/speak-failed', messageOf(error)), { status: 200 });
           }
         },
       });

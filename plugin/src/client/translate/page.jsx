@@ -78,6 +78,10 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
   // Which engine answered, for the little badge under the result.
   const [engine, setEngine] = React.useState(null);
   const [dict, setDict] = React.useState(null);
+  // The word expansion loads after the dictionary card so the senses show first.
+  const [expand, setExpand] = React.useState(null);
+  const [expandLoading, setExpandLoading] = React.useState(false);
+  const [playing, setPlaying] = React.useState('');
   const [phase, setPhase] = React.useState('idle');
   const [error, setError] = React.useState('');
   const [docName, setDocName] = React.useState('');
@@ -152,6 +156,7 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
     setError('');
     setSaved(false);
     setDict(null);
+    setExpand(null);
     const mode = looksLikeWord(clean) ? 'dict' : 'sentence';
     // The dictionary explains in the *target* language, not the UI language:
     // an English UI translating into Chinese must still get Chinese senses.
@@ -165,6 +170,7 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
       if (mode === 'dict') {
         setDict(result.dict);
         setTarget('');
+        void loadExpand(result.dict.word);
       } else {
         setTarget(result.translated);
       }
@@ -268,6 +274,52 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
       setSaved(true);
       await loadFavorites();
     } catch (failure) {
+      setError(String(failure?.message ?? failure));
+    }
+  };
+
+  /**
+   * Load synonyms / forms / phrases for one headword.
+   * @param {string} word - the headword.
+   * @returns {Promise<void>} resolves when loaded.
+   */
+  const loadExpand = async (word) => {
+    setExpand(null);
+    setExpandLoading(true);
+    try {
+      const result = await call('/translate', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: word, mode: 'expand', locale: to === 'zh' ? 'zh' : 'en' }),
+      });
+      setExpand(result.expand);
+    } catch {
+      setExpand(null);
+    } finally {
+      setExpandLoading(false);
+    }
+  };
+
+  /**
+   * Play one word or sentence with a given accent.
+   * @param {string} text - what to say.
+   * @param {string} accent - en-US | en-GB | zh-CN.
+   * @returns {Promise<void>} resolves when playback started.
+   */
+  const say = async (text, accent) => {
+    setPlaying(accent);
+    try {
+      const result = await call('/speak', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text, accent }),
+      });
+      const audio = new Audio(`data:${result.mime};base64,${result.base64}`);
+      audio.onended = () => setPlaying('');
+      audio.onerror = () => setPlaying('');
+      await audio.play();
+    } catch (failure) {
+      setPlaying('');
       setError(String(failure?.message ?? failure));
     }
   };
@@ -453,6 +505,26 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
               <div className="cbt-dict-head">
                 <span className="cbt-dict-word">{dict.word}</span>
                 {dict.phonetic ? <span className="cbt-dict-phonetic">{dict.phonetic}</span> : null}
+                <span className="cbt-dict-play">
+                  {[
+                    ['en-US', L('美', 'US')],
+                    ['en-GB', L('英', 'UK')],
+                  ].map(([accent, label]) => (
+                    <button
+                      key={accent}
+                      type="button"
+                      className="cbt-speak"
+                      data-cbt-speak={accent}
+                      aria-label={`${L('朗读', 'Pronounce')} ${label}`}
+                      onClick={() => void say(dict.word, accent)}
+                    >
+                      <span className="cbt-speak-icon" aria-hidden="true">
+                        {playing === accent ? '■' : '▶'}
+                      </span>
+                      {label}
+                    </button>
+                  ))}
+                </span>
               </div>
               <ul className="cbt-dict-senses">
                 {dict.senses.map((sense, index) => (
@@ -463,6 +535,59 @@ export function TranslateWorkbench({ t, locale = () => 'zh', inputActions }) {
                   </li>
                 ))}
               </ul>
+              {expandLoading ? <div className="cbt-dict-loading">{L('正在扩展词条…', 'Loading word details…')}</div> : null}
+
+              {expand && expand.forms.length > 0 ? (
+                <div className="cbt-dict-section" data-cbt-forms="true">
+                  <div className="cbt-dict-label">{L('词形', 'Forms')}</div>
+                  <div className="cbt-dict-chips">
+                    {expand.forms.map((form, index) => (
+                      <span className="cbt-dict-chip" key={index}>
+                        <span className="cbt-dict-chip-label">{form.label}</span> {form.value}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {expand && (expand.synonyms.length > 0 || expand.antonyms.length > 0) ? (
+                <div className="cbt-dict-section">
+                  {expand.synonyms.length > 0 ? (
+                    <div className="cbt-dict-row">
+                      <span className="cbt-dict-label">{L('近义', 'Synonyms')}</span>
+                      <span className="cbt-dict-words">{expand.synonyms.join(' · ')}</span>
+                    </div>
+                  ) : null}
+                  {expand.antonyms.length > 0 ? (
+                    <div className="cbt-dict-row">
+                      <span className="cbt-dict-label">{L('反义', 'Antonyms')}</span>
+                      <span className="cbt-dict-words">{expand.antonyms.join(' · ')}</span>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {expand && expand.phrases.length > 0 ? (
+                <div className="cbt-dict-section" data-cbt-phrases="true">
+                  <div className="cbt-dict-label">{L('常见搭配', 'Phrases')}</div>
+                  <ul className="cbt-dict-phrases">
+                    {expand.phrases.map((phrase, index) => (
+                      <li key={index}>
+                        <span className="cbt-dict-phrase-en">{phrase.en}</span>
+                        {phrase.zh ? <span className="cbt-dict-phrase-zh">{phrase.zh}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {expand && expand.mnemonic ? (
+                <div className="cbt-dict-section">
+                  <div className="cbt-dict-label">{L('记忆', 'Memory hook')}</div>
+                  <div className="cbt-dict-mnemonic">{expand.mnemonic}</div>
+                </div>
+              ) : null}
+
               {dict.note ? <div className="cbt-dict-note">{dict.note}</div> : null}
               <div className="cbt-actions">
                 <button type="button" className="cbt-btn" onClick={() => void copy(dict.word + ' ' + dict.senses.map((s) => s.meaning).join('；'))}>
@@ -603,8 +728,33 @@ export const TRANSLATE_CSS = `
 .cbt-result-text{font-size:13.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
 .cbt-error{margin:0;color:#e5484d;font-size:11.5px;line-height:1.5}
 .cbt-engine{margin-top:-4px;color:var(--dsw-alias-label-tertiary);font-size:10.5px;line-height:1.5}
-.cbt-dict{padding:14px;border-radius:12px;border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 9%,transparent);background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#fff) 40%,transparent);display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto}
-.cbt-dict-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.cbt-dict{padding:14px;border-radius:12px;border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 9%,transparent);background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#fff) 40%,transparent);display:flex;flex-direction:column;gap:8px;max-height:min(46vh,360px);overflow:auto}
+.cbt-dict-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cbt-dict-play{display:flex;gap:4px;margin-left:2px}
+.cbt-speak{
+  display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;
+  border-radius:999px;border:1px solid color-mix(in oklab,#635BFF 35%,transparent);
+  background:color-mix(in oklab,#635BFF 10%,transparent);
+  color:var(--dsw-alias-label-primary);font-size:11px;cursor:pointer;
+}
+.cbt-speak:hover{background:color-mix(in oklab,#635BFF 18%,transparent)}
+.cbt-speak-icon{font-size:9px;color:#635BFF}
+.cbt-dict-loading{font-size:11px;color:var(--dsw-alias-label-tertiary)}
+.cbt-dict-section{display:flex;flex-direction:column;gap:4px;padding-top:6px;border-top:1px solid color-mix(in oklab,var(--dsw-alias-label-primary) 8%,transparent)}
+.cbt-dict-label{font-size:10.5px;color:var(--dsw-alias-label-tertiary);letter-spacing:.02em}
+.cbt-dict-chips{display:flex;flex-wrap:wrap;gap:4px}
+.cbt-dict-chip{
+  padding:2px 8px;border-radius:7px;font-size:11.5px;
+  background:color-mix(in oklab,var(--dsw-alias-label-primary) 6%,transparent);
+  color:var(--dsw-alias-label-primary);
+}
+.cbt-dict-chip-label{color:var(--dsw-alias-label-tertiary);margin-right:3px}
+.cbt-dict-row{display:flex;gap:8px;font-size:12.5px;line-height:1.5}
+.cbt-dict-words{color:var(--dsw-alias-label-primary);word-break:break-word}
+.cbt-dict-phrases{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.cbt-dict-phrase-en{color:var(--dsw-alias-label-primary)}
+.cbt-dict-phrase-zh{margin-left:8px;color:var(--dsw-alias-label-secondary)}
+.cbt-dict-mnemonic{font-size:12.5px;line-height:1.55;color:var(--dsw-alias-label-secondary)}
 .cbt-dict-word{font-size:20px;font-weight:600;letter-spacing:-0.01em}
 .cbt-dict-phonetic{font-size:12px;color:var(--dsw-alias-label-secondary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .cbt-dict-senses{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
