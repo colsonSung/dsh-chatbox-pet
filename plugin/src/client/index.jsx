@@ -24,6 +24,7 @@ import { BoostButton } from './boost/button.jsx';
 import { QueueMergeButton } from './queue-merge.jsx';
 import { en as boostEn, NS as BOOST_NS, zh as boostZh } from './boost/locale.js';
 import { BoostDock } from './boost/panel.jsx';
+import { QUICK_CSS, QuickActionsDock } from './quick-actions.jsx';
 import { boostStore } from './boost/store.js';
 import { CSS as BOOST_CSS } from './boost/styles.js';
 
@@ -61,7 +62,7 @@ export function apply(ctx) {
     if (previous !== null) previous.remove();
     const style = document.createElement('style');
     style.setAttribute('data-plugin', 'chatbox-pet');
-    style.textContent = `${CSS}\n${BOOST_CSS}\n${SETTINGS_CSS}`;
+    style.textContent = `${CSS}\n${BOOST_CSS}\n${SETTINGS_CSS}\n${QUICK_CSS}`;
     document.head.appendChild(style);
     return () => {
       style.remove();
@@ -195,6 +196,32 @@ export function apply(ctx) {
         locale: BOOST_NS,
       },
       boostGate((props) => <BoostDock {...props} store={boostStore} t={tBoost} locale={locale} />),
+    ),
+  );
+
+  // The quick-actions seat: the "更多" pill beside the pet, with the shortcut
+  // panel behind it. It writes into the composer through the slot's own
+  // inputActions face, so it needs no Host route and no extra service.
+  ctx.slots.inject('conversation.input.dock', () =>
+    ctx.slots.register(
+      {
+        name: 'conversation.input.dock',
+        id: '@local/chatbox-pet/quick-actions',
+        order: 2,
+        label: () => t('quick.label'),
+        locale: NS,
+      },
+      (props) => {
+        const prefs = usePrefs();
+        return (
+          <QuickActionsDock
+            inputActions={props?.inputActions}
+            t={t}
+            locale={locale}
+            petVisible={prefs.pet !== false}
+          />
+        );
+      },
     ),
   );
 

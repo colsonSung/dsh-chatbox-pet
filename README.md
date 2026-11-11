@@ -73,6 +73,7 @@ writes only `pet` to the prefs file; the other two switches keep their state.
 | **Small talk from your own notes** | Seven tones quoting your memory, meeting minutes, reading shelf or moments, with the source named. Local templates, no model call. |
 | **Direct manipulation** | Right-click to make it say an exact line, replay a line it remembers, or play one of 17 actions. |
 | **Video reading** | A host tool — `video_read` — turns a video file or a link into a timestamped transcript with speaker labels, OCR'd on-screen subtitles and keyframes. Local only; see [Video reading](#video-reading). |
+| **Quick actions** | A "More" pill at the composer's top-right opens a panel of shortcuts (transcribe, image, writing, video, read video, music, slides). A shortcut only fills the draft — it never sends. See [Quick actions](#quick-actions). |
 
 ## Using it
 
@@ -166,6 +167,25 @@ Dependencies are optional and degrade one at a time: without `faster-whisper`
 you still get metadata and keyframes; without `sherpa-onnx` the transcript just
 has no speaker labels; without Vision (non-macOS) there are no subtitle lines.
 Each gap is reported in `warnings`.
+
+## Quick actions
+
+A small **More** pill sits at the composer's top-right (left of the pet; it hugs
+the corner when the pet is off). It opens a panel of shortcuts:
+
+| | |
+| --- | --- |
+| 录音转写 / Transcribe | transcribe the recording and list the key points |
+| 图像生成 / Image | generate an image |
+| 帮我写作 / Writing | write a short piece on a topic |
+| 视频生成 / Video | generate a short video |
+| 视频理解 / Read video | run `video_read` on this video |
+| 音乐生成 / Music | generate a short piece of music |
+| PPT 生成 / Slides | build a slide deck |
+
+Choosing one **only writes the instruction into the composer** — nothing is sent,
+and no request is started until you press send. The catalogue is data: adding a
+shortcut is one object in `src/client/quick-actions.js`.
 
 ## Asset rights
 
