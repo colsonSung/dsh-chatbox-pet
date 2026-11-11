@@ -19,6 +19,7 @@ import { createHash } from 'node:crypto';
 import { collectContext } from './sources/index.js';
 import { buildSystemPrompt, buildUserPrompt } from './prompt.js';
 import { buildMergeSystemPrompt, buildMergeUserPrompt, sanitizeMerged } from '../merge.js';
+import { complete } from '../llm.js';
 
 const DRAFT_LIMIT = 4000;
 const HINT_LIMIT = 400;
@@ -82,62 +83,6 @@ function pruneCache(now) {
   }
 }
 
-/**
- * Ask the model for one completion, reporting deltas as they arrive.
- *
- * A prepared call binds one adapter generation to one dispatch, so the stream
- * options are built from `prepared.config` rather than rebuilt by hand.
- * @param {object} options - the call parameters.
- * @returns {Promise<string>} the model's answer.
- */
-async function complete({ llm, provider, model, system, user, temperature, maxTokens, signal, onDelta, sessionId }) {
-  // A temperature the model does not accept fails the whole call, so it is only
-  // sent when the row asked for one; the adapter's resolved config decides otherwise.
-  const asked = { provider, model, maxTokens };
-  if (Number.isFinite(temperature)) asked.temperature = temperature;
-  // Some providers route per conversation (OpenCode requires the header); the
-  // Session id is what the adapter turns into that header.
-  if (typeof sessionId === 'string' && sessionId !== '') asked.sessionId = sessionId;
-  // A reasoning model left on its default effort can spend the whole token
-  // budget thinking and return no text at all (measured 2026-11-07). Ask for
-  // the lowest effort the model actually offers; the picker is capability-
-  // driven, so a model without reasoning metadata is left alone.
-  const preferLow = (controls, info) => {
-    const efforts = Array.isArray(info?.reasoning?.efforts) ? info.reasoning.efforts.map((effort) => effort?.id) : [];
-    const pick = ['off', 'minimal', 'low', 'medium', 'high', 'max'].find((id) => efforts.includes(id));
-    return pick === undefined ? controls : { ...controls, reasoningEffort: pick };
-  };
-  const prepared = await llm.prepareCall(asked, signal, preferLow);
-  const config = prepared?.config ?? asked;
-  const request = {
-    ...config,
-    messages: [{ role: 'user', content: [{ type: 'text', text: user }] }],
-    system,
-    signal,
-  };
-  const stream = prepared.stream(request);
-  let answer = '';
-  let failure;
-  for await (const chunk of stream) {
-    if (chunk === null || typeof chunk !== 'object') continue;
-    if (chunk.type === 'text-delta' && typeof chunk.text === 'string') {
-      answer += chunk.text;
-      if (typeof onDelta === 'function') onDelta(chunk.text);
-      continue;
-    }
-    if (chunk.type === 'finish') {
-      const reason = chunk.reason;
-      if (reason !== null && typeof reason === 'object' && (reason.kind === 'error' || reason.kind === 'aborted')) {
-        failure = reason;
-      }
-    }
-  }
-  if (failure !== undefined) {
-    // Keep the adapter's own reason for the Host log; the reader gets a short line.
-    throw aiError('AI 生成失败，请重试', new Error(JSON.stringify(failure).slice(0, 400)));
-  }
-  return answer.trim();
-}
 
 /**
  * Keep only the usable, sendable body of the model's answer.
