@@ -477,6 +477,7 @@ export const SHEET_CSS = `
   align-items:center;
   justify-content:center;
   padding:24px;
+  overflow:auto;
   background:color-mix(in oklab,#0b0c0f 32%,transparent);
   -webkit-backdrop-filter:blur(3px);
   backdrop-filter:blur(3px);
@@ -485,6 +486,8 @@ export const SHEET_CSS = `
 @keyframes cbp-sheet-fade{from{opacity:0}to{opacity:1}}
 .cbp-sheet{
   box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
   width:min(520px,100%);
 }
 .cbp-sheet{
@@ -538,7 +541,11 @@ body[data-ds-dark-theme] .cbp-sheet{
   font-size:11.5px;
   line-height:1.5;
 }
-.cbp-sheet-body{display:flex;flex-direction:column;gap:10px;}
+/*
+ * The body owns the scrolling: the head and the hint stay put, so a tall
+ * workbench (translate) never pushes the sheet past the viewport edge.
+ */
+.cbp-sheet-body{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow:auto;}
 .cbp-sheet-center{
   display:flex;
   flex-direction:column;
@@ -694,7 +701,7 @@ body[data-ds-dark-theme] .cbp-sheet{
 }
 .cbp-sheet.cbp-sheet-wide{
   width:min(660px,100%);
-  max-height:min(82vh,720px);
+  max-height:min(74vh,600px);
 }
 @media (prefers-reduced-motion: reduce){
   .cbp-sheet-veil,.cbp-sheet{animation:none}
