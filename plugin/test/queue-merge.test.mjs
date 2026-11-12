@@ -61,16 +61,23 @@ test('an attachment is detected on either side', () => {
   assert.equal(clientHasAttachment(queued('a', 'text', [image])), true);
 });
 
-test('a merge needs at least two text-only, non-empty messages', () => {
+test('a merge needs at least two non-empty messages; a long queue is folded in batches', () => {
   assert.equal(planMerge([queued('a', 'one')]).reason, 'too-few');
   assert.equal(planMerge([]).reason, 'too-few');
   assert.equal(planMerge([queued('a', 'one'), queued('b', '   ')]).reason, 'empty');
-  assert.equal(
-    planMerge([queued('a', 'one'), queued('b', 'two', [{ type: 'image', attachment: {} }])]).reason,
-    'attachment',
-  );
-  const tooMany = Array.from({ length: MERGE_LIMIT + 1 }, (_, index) => queued(String(index), `m${index}`));
-  assert.equal(planMerge(tooMany).reason, 'too-many');
+
+  // Attachments no longer block: the page carries the blocks onto the merged message.
+  const withImage = planMerge([queued('a', 'one'), queued('b', 'two', [{ type: 'image', attachment: {} }])]);
+  assert.equal(withImage.ok, true);
+  assert.equal(withImage.reason, '');
+
+  // A queue longer than one batch is not a refusal; only the batch is described.
+  const tooMany = Array.from({ length: MERGE_LIMIT + 4 }, (_, index) => queued(String(index), `m${index}`));
+  const batched = planMerge(tooMany);
+  assert.equal(batched.ok, true);
+  assert.equal(batched.items.length, MERGE_LIMIT);
+  assert.equal(batched.texts.length, MERGE_LIMIT);
+  assert.equal(batched.total, MERGE_LIMIT + 4);
 
   const ok = planMerge([queued('a', 'one'), queued('b', 'two')]);
   assert.equal(ok.ok, true);
@@ -103,16 +110,23 @@ test('the merge prompt forbids inventing requirements', () => {
   assert.match(user, /2\. 第二条/);
 });
 
-test('the chip counts what is actually mergeable', () => {
+test('the chip counts the batch, and attachments no longer hide it', () => {
   const view = readItems([queued('a', 'one'), queued('b', 'two'), queued('c', 'three')]);
   assert.equal(view.items.length, 3);
   assert.equal(view.blocked, '');
+  assert.equal(view.batch, 3);
+  assert.equal(view.batches, 1);
   assert.equal(readItems([queued('a', 'one')]).blocked, 'too-few');
   assert.equal(readItems([]).blocked, 'too-few');
-  assert.equal(
-    readItems([queued('a', 'one'), queued('b', 'two', [{ type: 'file', attachment: {} }])]).blocked,
-    'attachment',
-  );
+
+  const withFile = readItems([queued('a', 'one'), queued('b', 'two', [{ type: 'file', attachment: {} }])]);
+  assert.equal(withFile.blocked, '', 'an attachment no longer blocks the merge');
+  assert.equal(withFile.hasAttachment, true);
+
+  const long = readItems(Array.from({ length: CLIENT_MERGE_LIMIT + 5 }, (_, i) => queued(String(i), `m${i}`)));
+  assert.equal(long.blocked, '');
+  assert.equal(long.batch, CLIENT_MERGE_LIMIT);
+  assert.equal(long.batches, 2);
   assert.equal(CLIENT_MERGE_LIMIT, MERGE_LIMIT);
 });
 
@@ -133,6 +147,32 @@ test('applying a merge edits the first item, then removes the rest', async () =>
     ['b', 'remove'],
     ['c', 'remove'],
   ]);
+});
+
+test('附件的块会被搬到合并后的那条消息上，不会丢', async () => {
+  const calls = [];
+  const image = { type: 'image', attachment: { attachmentId: 'img-1' } };
+  const file = { type: 'file', attachment: { attachmentId: 'file-1' } };
+  const session = {
+    async updateQueue(id, action) {
+      calls.push([id, action]);
+      return { ok: true };
+    },
+  };
+  const result = await applyMerge(
+    session,
+    [
+      { id: 'a', content: [{ type: 'text', text: 'one' }, image] },
+      { id: 'b', content: [{ type: 'text', text: 'two' }] },
+      { id: 'c', content: [{ type: 'text', text: 'three' }, file] },
+    ],
+    'one two three',
+  );
+  assert.equal(result.ok, true);
+  const edit = calls.find(([, action]) => action.kind === 'edit');
+  assert.ok(edit, 'the first item is edited');
+  assert.deepEqual(edit[1].content[0], { type: 'text', text: 'one two three' });
+  assert.deepEqual(edit[1].content.slice(1), [image, file], 'both attachments ride along');
 });
 
 test('a failed edit stops the merge before anything is removed', async () => {

@@ -11,7 +11,7 @@ import * as React from 'react';
 import { cloneElement, useSyncExternalStore } from 'react';
 import { Tooltip as HostTooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 
-import { mergeQueue, readItems } from './queue-merge.js';
+import { MERGE_LIMIT, mergeQueue, readItems } from './queue-merge.js';
 import { IconMerge } from './boost/icons.jsx';
 
 /**
@@ -84,8 +84,10 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
   React.useEffect(() => () => window.clearTimeout(timerRef.current), []);
 
   const count = queue.items.length;
-  // Nothing to merge, or something in it cannot survive a text edit.
-  if (count < 2 || queue.blocked === 'attachment' || queue.blocked === 'too-many') return null;
+  // Only a single message has nothing to fold. Attachments now survive the merge
+  // and a long queue is folded one batch per press, so neither hides the chip.
+  if (count < 2) return null;
+  const batch = queue.batch ?? Math.min(count, MERGE_LIMIT);
 
   /**
    * Merge the queue and report what happened.
@@ -123,7 +125,14 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
     }
   };
 
-  const label = phase === 'running' ? t('merge.running') : outcome !== '' ? outcome : t('merge.label')(count);
+  const label =
+    phase === 'running'
+      ? t('merge.running')
+      : outcome !== ''
+        ? outcome
+        : batch < count
+          ? t('merge.labelBatch')(batch, count, queue.batches ?? 2)
+          : t('merge.label')(count);
   return (
     <Tip label={label}>
       <button
@@ -141,7 +150,8 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
         }}
       >
         <IconMerge />
-        <span className="cbp-merge-count">{phase === 'running' ? '…' : count}</span>
+        <span className="cbp-merge-count">{phase === 'running' ? '…' : batch}</span>
+        {batch < count ? <span className="cbp-merge-total">/{count}</span> : null}
       </button>
     </Tip>
   );

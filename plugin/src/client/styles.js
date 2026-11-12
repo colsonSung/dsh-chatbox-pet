@@ -433,7 +433,8 @@ body[data-ds-dark-theme] .cbp-bubble::before{
 }
 
 /*
- * The queue-merge chip in the composer tool row.
+ * The queue-merge chip in the composer tool row. The count shows the current
+ * batch; "/total" appears only when the queue needs more than one press.
  *
  * Same 28px ghost footprint as the Host's own tool buttons so the row keeps one
  * rhythm; the count rides in a small pill because "how many will this fold" is
@@ -464,6 +465,7 @@ body[data-ds-dark-theme] .cbp-bubble::before{
   outline-offset:1px;
 }
 .cbp-merge[disabled]{cursor:default;opacity:.6;}
+.cbp-merge-total{font-size:9.5px;opacity:.55;margin-left:-2px}
 .cbp-merge-count{
   min-width:16px;
   height:16px;

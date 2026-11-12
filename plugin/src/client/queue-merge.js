@@ -14,7 +14,13 @@
  * can see and delete, never with the text already gone.
  */
 
-/** The most queued messages one merge will fold (mirrors the host's limit). */
+/**
+ * The most queued messages one merge folds.
+ *
+ * A queue longer than this is not an error: the chip merges the first batch and
+ * stays available for the rest, so a reader with thirty waiting messages folds
+ * them in three presses instead of being told the feature does not apply.
+ */
 export const MERGE_LIMIT = 8;
 
 /** The inbox projection cell that holds the queue for the next turn. */
@@ -73,12 +79,18 @@ export function readItems(raw) {
   const list = Array.isArray(raw) ? raw : [];
   const items = list.filter((item) => item !== null && typeof item === 'object' && typeof item.id === 'string');
   const texts = items.map(textOf);
-  const usable = items.filter((item, index) => !hasAttachment(item) && texts[index] !== '');
-  let blocked = '';
-  if (items.length >= 2 && usable.length !== items.length) blocked = 'attachment';
-  else if (items.length > MERGE_LIMIT) blocked = 'too-many';
-  else if (items.length < 2) blocked = 'too-few';
-  return { items, texts, mergeable: items.length, blocked };
+  // Only the next batch is folded; the rest waits for the following press.
+  const batch = Math.min(items.length, MERGE_LIMIT);
+  const blocked = items.length < 2 ? 'too-few' : '';
+  return {
+    items,
+    texts,
+    mergeable: items.length,
+    batch,
+    batches: Math.max(1, Math.ceil(items.length / MERGE_LIMIT)),
+    hasAttachment: items.some((item) => hasAttachment(item)),
+    blocked,
+  };
 }
 
 /**
@@ -149,10 +161,17 @@ export async function applyMerge(session, items, merged) {
   if (typeof session?.updateQueue !== 'function') return { ok: false, merged: 0, removed: 0, error: 'no-session' };
 
   const [first, ...rest] = list;
+  // Attachments from every folded message ride along on the merged one: an edit
+  // that only carried text would silently drop the images the reader queued.
+  const attachments = list.flatMap((item) =>
+    (Array.isArray(item?.content) ? item.content : []).filter(
+      (block) => block !== null && typeof block === 'object' && block.type !== 'text',
+    ),
+  );
   try {
     const edited = await session.updateQueue(first.id, {
       kind: 'edit',
-      content: [{ type: 'text', text }],
+      content: [{ type: 'text', text }, ...attachments],
     });
     if (edited?.ok !== true) {
       return { ok: false, merged: 0, removed: 0, error: edited?.error?.code ?? 'edit-failed' };
@@ -200,7 +219,9 @@ export async function applyMerge(session, items, merged) {
 export async function mergeQueue(input = {}) {
   const queue = readQueue(input.session);
   if (queue.blocked !== '') return { ok: false, count: 0, optimized: false, reason: '', error: queue.blocked };
-  const texts = queue.items.map(textOf);
+  // One batch per press: the queue may be longer than a single merge allows.
+  const batch = queue.items.slice(0, MERGE_LIMIT);
+  const texts = batch.map(textOf);
   const merged = await requestMergedText(texts, {
     sessionId: input.sessionId,
     locale: input.locale,
@@ -210,16 +231,17 @@ export async function mergeQueue(input = {}) {
   // not the same queue anymore; editing the snapshot would drop or duplicate
   // text, so stop and let the reader press the chip again on the new queue.
   const current = readQueue(input.session);
+  const currentBatch = current.items.slice(0, batch.length);
   const sameItems =
-    current.items.length === queue.items.length &&
-    current.items.every((item, index) => item.id === queue.items[index].id && textOf(item) === texts[index]);
+    currentBatch.length === batch.length &&
+    currentBatch.every((item, index) => item.id === batch[index].id && textOf(item) === texts[index]);
   if (!sameItems) {
-    return { ok: false, count: queue.items.length, optimized: false, reason: '', error: 'queue-changed' };
+    return { ok: false, count: batch.length, optimized: false, reason: '', error: 'queue-changed' };
   }
-  const applied = await applyMerge(input.session, queue.items, merged.prompt);
+  const applied = await applyMerge(input.session, batch, merged.prompt);
   return {
     ok: applied.ok,
-    count: queue.items.length,
+    count: batch.length,
     optimized: merged.optimized,
     reason: merged.reason,
     error: applied.error,

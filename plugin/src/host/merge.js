@@ -52,24 +52,25 @@ export function hasAttachment(item) {
 }
 
 /**
- * Decide whether a queue can be merged, and why not.
+ * Decide whether a queue can be merged, and which slice gets folded.
  *
- * The rules exist because the merge itself is a text edit of the first item plus
- * removals of the rest: an attachment in ANY item would be destroyed by that,
- * so the whole merge is refused instead of silently losing a file.
+ * A long queue is not a refusal any more: only the first `limit` items are
+ * described, and the page folds the same slice, so a queue of thirty is merged
+ * in batches. Attachments no longer block the merge either — the page carries
+ * every non-text block onto the merged message, so nothing is lost.
  * @param {Array<any>} items - the queued items, in order.
- * @param {number} [limit] - the most items a merge will fold.
- * @returns {{ok: boolean, reason: string, items: Array<any>, texts: string[]}} the verdict.
+ * @param {number} [limit] - the most items one merge will fold.
+ * @returns {{ok: boolean, reason: string, items: Array<any>, texts: string[], total: number}} the verdict.
  */
 export function planMerge(items, limit = MERGE_LIMIT) {
   const all = Array.isArray(items) ? items.filter((item) => item !== null && typeof item === 'object') : [];
-  if (all.length < 2) return { ok: false, reason: 'too-few', items: all, texts: [] };
-  if (all.length > limit) return { ok: false, reason: 'too-many', items: all, texts: [] };
-  if (all.some(hasAttachment)) return { ok: false, reason: 'attachment', items: all, texts: [] };
-  const texts = all.map(textOf);
-  if (texts.every((text) => text === '')) return { ok: false, reason: 'empty', items: all, texts };
-  if (texts.some((text) => text === '')) return { ok: false, reason: 'empty', items: all, texts };
-  return { ok: true, reason: '', items: all, texts };
+  if (all.length < 2) return { ok: false, reason: 'too-few', items: all, texts: [], total: all.length };
+  const batch = all.slice(0, Math.max(2, limit));
+  const texts = batch.map(textOf);
+  const total = all.length;
+  if (texts.every((text) => text === '')) return { ok: false, reason: 'empty', items: batch, texts, total };
+  if (texts.some((text) => text === '')) return { ok: false, reason: 'empty', items: batch, texts, total };
+  return { ok: true, reason: '', items: batch, texts, total };
 }
 
 /**
