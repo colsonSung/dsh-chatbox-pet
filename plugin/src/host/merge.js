@@ -12,9 +12,14 @@
  * and how to accept the model's answer (it must not invent or drop content).
  *
  * The queue itself is client state (the Host inbox is reached through
- * `session.updateQueue` on the page), so the mutation lives in
- * `src/client/queue-merge.js`. This half only answers "what should the merged
- * text be".
+ * `session.updateQueue` and `session.prompt` on the page), so the mutation
+ * lives in `src/client/queue-merge.js`. This half only answers "what should the
+ * merged text be".
+ *
+ * `planMerge` judges the IN-PLACE text fold — a batch the page edits with
+ * `updateQueue`, which takes `TextBlock[]` only, so a batch holding an
+ * attachment is refused there. A queue with pictures is folded by the page with
+ * a requeued prompt instead, and never reaches this judgement.
  */
 
 /** The most queued messages one merge will fold; more means the reader is not merging. */

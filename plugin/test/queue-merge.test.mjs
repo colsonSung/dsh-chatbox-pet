@@ -25,10 +25,14 @@ import {
 } from '../src/host/merge.js';
 import {
   applyMerge,
+  applyRequeue,
+  base64Of,
   foldRun,
   hasAttachment as clientHasAttachment,
+  imagesOf,
   isFoldable,
   joinTexts,
+  MAX_IMAGES,
   MERGE_LIMIT as CLIENT_MERGE_LIMIT,
   mergeQueue,
   readItems,
@@ -113,7 +117,7 @@ test('the merge prompt forbids inventing requirements', () => {
   assert.match(user, /2\. 第二条/);
 });
 
-test('the chip counts the foldable batch, and an image-only queue has none', () => {
+test('the chip counts the batch: a text run in place, a whole image queue by requeue', () => {
   const view = readItems([queued('a', 'one'), queued('b', 'two'), queued('c', 'three')]);
   assert.equal(view.items.length, 3);
   assert.equal(view.blocked, '');
@@ -124,30 +128,46 @@ test('the chip counts the foldable batch, and an image-only queue has none', () 
   assert.equal(readItems([queued('a', 'one')]).blocked, 'too-few');
   assert.equal(readItems([]).blocked, 'too-few');
 
-  // The queue in the bug report: two image-only messages. Nothing to fold, and
-  // the Host would refuse the edit, so the chip must not be offered at all.
+  // The queue in the bug report: two image-only messages. Images cannot travel
+  // the text edit, so the merge is a requeue of the whole queue and it carries
+  // both pictures.
   const imageOnly = readItems([
-    { id: 'a', content: [{ type: 'image', attachment: { attachmentId: 'i1' } }] },
-    { id: 'b', content: [{ type: 'image', attachment: { attachmentId: 'i2' } }] },
+    { id: 'a', content: [{ type: 'image', attachment: { attachmentId: 'i1', mediaType: 'image/jpeg' } }] },
+    { id: 'b', content: [{ type: 'image', attachment: { attachmentId: 'i2', mediaType: 'image/jpeg' } }] },
   ]);
-  assert.equal(imageOnly.blocked, 'too-few');
-  assert.equal(imageOnly.batch, 0);
-  assert.equal(imageOnly.start, -1);
-  assert.equal(imageOnly.skipped, 2);
+  assert.equal(imageOnly.blocked, '');
+  assert.equal(imageOnly.mode, 'requeue');
+  assert.equal(imageOnly.batch, 2);
+  assert.equal(imageOnly.start, 0);
+  assert.equal(imageOnly.images, 2);
 
-  // An attachment inside the batch splits the run; the text run after it is
-  // still foldable, and the skipped count keeps the chip honest.
+  // A file is not re-admissible from the page, so it splits the queue; the text
+  // run after it is still foldable in place and the skipped count stays honest.
   const mixed = readItems([queued('a', 'one'), queued('b', 'two', [{ type: 'file', attachment: {} }]), queued('c', 'three'), queued('d', 'four')]);
   assert.equal(mixed.blocked, '');
+  assert.equal(mixed.mode, 'edit');
   assert.equal(mixed.start, 2);
   assert.equal(mixed.batch, 2);
   assert.equal(mixed.skipped, 2);
 
-  // Words, then an image, then words: folding across the image would move the
-  // second text in front of it, so there is no run and no chip.
-  const split = readItems([queued('a', 'one'), queued('b', 'two', [{ type: 'image', attachment: {} }]), queued('c', 'three')]);
-  assert.equal(split.blocked, 'too-few');
-  assert.equal(split.batch, 0);
+  // Words, a picture, more words: the queue holds an image, so it merges whole
+  // rather than moving the second text in front of the picture.
+  const withPicture = readItems([queued('a', 'one'), queued('b', 'two', [{ type: 'image', attachment: { attachmentId: 'x', mediaType: 'image/png' } }]), queued('c', 'three')]);
+  assert.equal(withPicture.mode, 'requeue');
+  assert.equal(withPicture.batch, 3);
+  assert.equal(withPicture.images, 1);
+
+  // A queue that is only a file and one text has nothing to fold.
+  const fileOnly = readItems([queued('a', 'one', [{ type: 'file', attachment: {} }]), queued('b', 'two', [{ type: 'file', attachment: {} }])]);
+  assert.equal(fileOnly.blocked, 'unsupported', 'files have no re-admission path from the page');
+  assert.equal(fileOnly.mode, 'none');
+
+  // More images than one message may carry: the chip must not offer the write.
+  const tooMany = readItems(
+    Array.from({ length: MAX_IMAGES + 1 }, (_, index) => ({ id: `i${index}`, content: [{ type: 'image', attachment: { attachmentId: `a${index}`, mediaType: 'image/png' } }] })),
+  );
+  assert.equal(tooMany.blocked, 'too-many-images');
+  assert.equal(tooMany.mode, 'none');
 
   const long = readItems(Array.from({ length: CLIENT_MERGE_LIMIT + 5 }, (_, i) => queued(String(i), `m${i}`)));
   assert.equal(long.blocked, '');
@@ -309,17 +329,24 @@ test('mergeQueue refuses a queue it cannot fold, and touches nothing', async () 
   assert.equal(touched, 0);
 });
 
-test('an image-only queue is refused before the model is asked', async () => {
+test('an image-only queue is merged by queuing one message that carries both pictures', async () => {
   let asked = 0;
-  let touched = 0;
   const images = [
-    { id: 'a', content: [{ type: 'image', attachment: { attachmentId: 'i1' } }] },
-    { id: 'b', content: [{ type: 'image', attachment: { attachmentId: 'i2' } }] },
+    { id: 'a', content: [{ type: 'image', attachment: { attachmentId: 'i1', mediaType: 'image/jpeg' } }] },
+    { id: 'b', content: [{ type: 'image', attachment: { attachmentId: 'i2', mediaType: 'image/png' } }] },
   ];
+  const calls = [];
   const session = {
     projections: { faceOf: () => ({ getSnapshot: () => ({ 'next-turn': images }) }) },
-    async updateQueue() {
-      touched += 1;
+    async readAttachment(ref) {
+      return { ok: true, value: { attachment: ref, data: Uint8Array.from([1, 2, 3, 4]) } };
+    },
+    async prompt(content, mode) {
+      calls.push(['prompt', mode, content]);
+      return { ok: true, value: { accepted: true } };
+    },
+    async updateQueue(id, action) {
+      calls.push([id, action.kind]);
       return { ok: true };
     },
   };
@@ -331,22 +358,39 @@ test('an image-only queue is refused before the model is asked', async () => {
       return { ok: false };
     },
   });
-  assert.equal(result.ok, false);
-  assert.equal(result.error, 'too-few');
-  assert.equal(asked, 0, 'no model call for a queue with nothing to fold');
-  assert.equal(touched, 0, 'no queue write either');
+  assert.equal(result.ok, true);
+  assert.equal(result.mode, 'requeue');
+  assert.equal(asked, 0, 'a queue with no text has nothing for the model to merge');
+  const prompt = calls.find((call) => call[0] === 'prompt');
+  assert.ok(prompt, 'one new message is queued');
+  assert.equal(prompt[1], 'queue', 'it is queued, not sent as a new turn');
+  assert.deepEqual(
+    prompt[2].map((part) => part.type),
+    ['image', 'image'],
+    'both pictures ride on the merged message, in order',
+  );
+  assert.equal(prompt[2][0].data, base64Of(Uint8Array.from([1, 2, 3, 4])));
+  assert.equal(prompt[2][0].mediaType, 'image/jpeg');
+  assert.deepEqual(
+    calls.filter((call) => call[0] !== 'prompt').map(([id, kind]) => [id, kind]),
+    [['a', 'remove'], ['b', 'remove']],
+    'the originals are removed only after the new message was accepted',
+  );
 });
 
-test('a text run after an image is the batch, and the image stays queued', async () => {
-  const image = { id: 'img', content: [{ type: 'image', attachment: { attachmentId: 'i1' } }] };
+test('a file message splits the queue, and the text run after it merges in place', async () => {
+  const file = queued('file', '看看这个', [{ type: 'file', attachment: { attachmentId: 'f1' } }]);
   const first = queued('a', '第一条');
   const second = queued('b', '第二条');
   const calls = [];
   const session = {
-    projections: { faceOf: () => ({ getSnapshot: () => ({ 'next-turn': [image, first, second] }) }) },
+    projections: { faceOf: () => ({ getSnapshot: () => ({ 'next-turn': [file, first, second] }) }) },
     async updateQueue(id, action) {
       calls.push([id, action.kind]);
       return { ok: true };
+    },
+    async prompt() {
+      throw new Error('a text-only run must not requeue');
     },
   };
   const result = await mergeQueue({
@@ -355,8 +399,8 @@ test('a text run after an image is the batch, and the image stays queued', async
     fetchImpl: async () => ({ ok: true, json: async () => ({ ok: true, result: { prompt: '合并稿', optimized: true, reason: '' } }) }),
   });
   assert.equal(result.ok, true);
-  assert.equal(result.count, 2);
-  assert.deepEqual(calls, [['a', 'edit'], ['b', 'remove']], 'the image item is never written');
+  assert.equal(result.mode, 'edit');
+  assert.deepEqual(calls, [['a', 'edit'], ['b', 'remove']], 'the file item is never written');
 });
 
 test('the host merge returns the model text, and degrades to a join', async () => {
@@ -419,4 +463,123 @@ test('mergeQueue runs the whole path end to end', async () => {
   assert.equal(result.count, 2);
   assert.equal(result.optimized, true);
   assert.deepEqual(calls, [['a', 'edit'], ['b', 'remove']]);
+});
+
+/**
+ * A session whose queue carries images, with the page-side reads stubbed.
+ * @param {Array<any>} items - the queued items.
+ * @param {object} [behaviour] - overrides for readAttachment / prompt / updateQueue.
+ * @returns {object} the fake session plus the call log.
+ */
+function imageSession(items, behaviour = {}) {
+  const calls = [];
+  let snapshot = items;
+  let cell = { 'next-turn': snapshot };
+  const face = { subscribe: () => () => {}, getSnapshot: () => cell };
+  const session = {
+    projections: { faceOf: () => face },
+    async readAttachment(ref) {
+      calls.push(['read', ref.attachmentId]);
+      if (behaviour.readAttachment !== undefined) return behaviour.readAttachment(ref);
+      return { ok: true, value: { attachment: ref, data: Uint8Array.from([7, 8, 9]) } };
+    },
+    async prompt(content, mode) {
+      calls.push(['prompt', mode, content]);
+      if (behaviour.prompt !== undefined) return behaviour.prompt(content, mode);
+      return { ok: true, value: { accepted: true } };
+    },
+    async updateQueue(id, action) {
+      calls.push([id, action.kind]);
+      if (behaviour.updateQueue !== undefined) return behaviour.updateQueue(id, action);
+      snapshot = snapshot.filter((item) => item.id !== id);
+      cell = { 'next-turn': snapshot };
+      return { ok: true };
+    },
+  };
+  return { session, calls, replace(next) { snapshot = next; cell = { 'next-turn': next }; } };
+}
+
+const picture = (id, attachmentId) => ({ id, content: [{ type: 'image', attachment: { attachmentId, mediaType: 'image/png' } }] });
+
+test('a requeue never prompts when an image cannot be read', async () => {
+  const fake = imageSession([picture('a', 'i1'), picture('b', 'i2')], {
+    readAttachment: () => ({ ok: false, error: { code: 'session/attachment-invalid' } }),
+  });
+  const result = await applyRequeue(fake.session, [picture('a', 'i1'), picture('b', 'i2')], '');
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'session/attachment-invalid');
+  assert.deepEqual(fake.calls.filter((call) => call[0] === 'prompt'), [], 'nothing is queued');
+  assert.deepEqual(fake.calls.filter((call) => call[0] !== 'read'), [], 'nothing is removed');
+});
+
+test('a requeue removes nothing when the prompt is refused', async () => {
+  const items = [picture('a', 'i1'), picture('b', 'i2')];
+  const fake = imageSession(items, {
+    prompt: () => ({ ok: false, error: { code: 'session/agent-busy' } }),
+  });
+  const result = await applyRequeue(fake.session, items, '');
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'session/agent-busy');
+  assert.deepEqual(fake.calls.map((call) => call[1]), ['i1', 'i2', 'queue'], 'read, prompt, and no removal');
+});
+
+test('a requeue that cannot remove every original says so instead of claiming success', async () => {
+  const items = [picture('a', 'i1'), picture('b', 'i2')];
+  const fake = imageSession(items, {
+    updateQueue: (id) => (id === 'b'
+      ? { ok: false, error: { code: 'remove-failed' } }
+      : { ok: true }),
+  });
+  const result = await applyRequeue(fake.session, items, '');
+  assert.equal(result.ok, false);
+  assert.equal(result.merged, 1, 'the merged message is queued');
+  assert.equal(result.removed, 1);
+  assert.equal(result.error, 'remove-failed');
+});
+
+test('a queue that grows while an image merge is prepared is left alone', async () => {
+  const fake = imageSession([picture('img', 'i1'), queued('a', '第一条'), queued('b', '第二条')]);
+  const result = await mergeQueue({
+    session: fake.session,
+    sessionId: 's',
+    fetchImpl: async () => {
+      // A third message is queued while the model merges the two texts.
+      fake.replace([picture('img', 'i1'), queued('a', '第一条'), queued('b', '第二条'), queued('c', '第三条')]);
+      return { ok: true, json: async () => ({ ok: true, result: { prompt: '合并稿', optimized: true, reason: '' } }) };
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'queue-changed');
+  assert.deepEqual(fake.calls, [], 'no image read, no prompt, no removal');
+});
+
+test('a mixed image and text queue sends the images with the merged text', async () => {
+  const items = [picture('img', 'i1'), queued('a', '第一条'), queued('b', '第二条')];
+  const fake = imageSession(items);
+  const result = await mergeQueue({
+    session: fake.session,
+    sessionId: 's',
+    fetchImpl: async () => ({ ok: true, json: async () => ({ ok: true, result: { prompt: '合并稿', optimized: true, reason: '' } }) }),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.mode, 'requeue');
+  const prompt = fake.calls.find((call) => call[0] === 'prompt');
+  assert.deepEqual(prompt[2].map((part) => part.type), ['image', 'text'], 'images first, text last');
+  assert.equal(prompt[2][1].text, '合并稿');
+  assert.deepEqual(
+    fake.calls.filter((call) => call[0] !== 'prompt' && call[0] !== 'read').map(([id, kind]) => [id, kind]),
+    [['img', 'remove'], ['a', 'remove'], ['b', 'remove']],
+  );
+});
+
+test('image bytes are encoded the way the composer sends them', () => {
+  assert.equal(base64Of(Uint8Array.from([])), '');
+  assert.equal(base64Of(Uint8Array.from([65])), 'QQ==');
+  assert.equal(base64Of(Uint8Array.from([65, 66])), 'QUI=');
+  assert.equal(base64Of(Uint8Array.from([65, 66, 67])), 'QUJD');
+  // Multi-chunk input (the encoder flushes every 8 KiB) must round-trip.
+  const long = Uint8Array.from({ length: 20000 }, (_, index) => index % 256);
+  const encoded = base64Of(long);
+  assert.equal(encoded.length, 4 * Math.ceil(long.length / 3));
+  assert.equal(Buffer.from(encoded, 'base64').equals(Buffer.from(long)), true);
 });

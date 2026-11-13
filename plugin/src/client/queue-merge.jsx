@@ -1,12 +1,13 @@
 /**
  * The composer tool-row seat that merges the queue.
  *
- * It renders ONLY while at least two consecutive text-only messages are waiting
- * for the next turn — a merge you cannot use is noise in a row that already
- * holds five controls, and a chip that opens a write the Host refuses is worse
- * than no chip. The count comes from the session's own inbox projection, so the
- * chip appears and disappears with the queue itself, including when the agent
- * claims a message mid-merge.
+ * It renders ONLY while the queue can actually be folded — two or more
+ * messages, and either images to carry or a run of two text messages to edit.
+ * A merge you cannot use is noise in a row that already holds five controls, and
+ * a chip that opens a write the Host refuses is worse than no chip. The view
+ * comes from the session's own inbox projection, so the chip appears and
+ * disappears with the queue itself, including when the agent claims a message
+ * mid-merge.
  */
 import * as React from 'react';
 import { cloneElement, useSyncExternalStore } from 'react';
@@ -87,9 +88,11 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
   const count = queue.items.length;
   const batch = queue.batch ?? 0;
   const skipped = queue.skipped ?? 0;
-  // Fewer than two consecutive text-only messages: the Host would refuse the
-  // edit, so the chip stays out of the row instead of opening a dead action.
-  if (batch < 2) return null;
+  const images = queue.images ?? 0;
+  const mode = queue.mode ?? 'none';
+  // Nothing the Host would accept: no chip, instead of a button that opens a
+  // refused write.
+  if (batch < 2 || mode === 'none') return null;
 
   /**
    * Merge the queue and report what happened.
@@ -115,11 +118,15 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
             ? t('merge.changed')
             : result.error === 'session/queue-item-not-found'
               ? t('merge.claimed')
-              : result.error === 'has-attachment' || result.error === 'session/attachment-invalid'
-                ? t('merge.attachments')
+              : result.error === 'remove-failed'
+                ? t('merge.partial')
+                : result.error === 'has-attachment'
+                  ? t('merge.attachments')
                 : result.error === 'bad-input' || result.error === 'empty'
                   ? t('merge.empty')
-                  : t('merge.failed'),
+                  : result.error === 'too-many-images'
+                    ? t('merge.tooManyImages')(images)
+                    : t('merge.failed'),
         );
       }
     } catch {
@@ -136,11 +143,13 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
       ? t('merge.running')
       : outcome !== ''
         ? outcome
-        : skipped > 0
-          ? t('merge.labelSkipped')(batch, skipped)
-          : batch < count
-            ? t('merge.labelBatch')(batch, count, queue.batches ?? 2)
-            : t('merge.label')(count);
+        : mode === 'requeue'
+          ? t('merge.labelImages')(count, images)
+          : skipped > 0
+            ? t('merge.labelSkipped')(batch, skipped)
+            : batch < count
+              ? t('merge.labelBatch')(batch, count, queue.batches ?? 2)
+              : t('merge.label')(count);
   return (
     <Tip label={label}>
       <button
@@ -149,6 +158,7 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
         data-cbp-merge
         data-cbp-merge-count={count}
         data-cbp-merge-batch={batch}
+        data-cbp-merge-mode={mode}
         data-cbp-merge-phase={phase}
         aria-label={label}
         aria-busy={phase === 'running' ? 'true' : undefined}
@@ -160,7 +170,7 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
       >
         <IconMerge />
         <span className="cbp-merge-count">{phase === 'running' ? '…' : batch}</span>
-        {skipped === 0 && batch < count ? <span className="cbp-merge-total">/{count}</span> : null}
+        {mode === 'edit' && skipped === 0 && batch < count ? <span className="cbp-merge-total">/{count}</span> : null}
       </button>
     </Tip>
   );

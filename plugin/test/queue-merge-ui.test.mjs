@@ -2,9 +2,9 @@
  * The merge chip rendered for real, in jsdom.
  *
  * The unit tests cover what the queue view says; this one covers what the reader
- * sees: the chip is absent for a queue the Host would refuse (image-only), its
- * badge counts the foldable run, and a click writes exactly the edit-then-remove
- * sequence and nothing else.
+ * sees: the chip is absent when nothing can be folded, a text queue folds in
+ * place with an edit-then-remove write, and a queue carrying images is folded by
+ * queuing one message with every picture on it.
  */
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -46,9 +46,13 @@ function queued(id, text, extra = []) {
   return { id, role: 'user', content: [{ type: 'text', text }, ...extra] };
 }
 
-const image = (id) => ({ type: 'image', attachment: { attachmentId: id } });
+const picture = (id, attachmentId) => ({
+  id,
+  role: 'user',
+  content: [{ type: 'image', attachment: { attachmentId, mediaType: 'image/png' } }],
+});
 
-test('the merge chip only appears for a queue the Host can actually fold', async () => {
+test('the merge chip folds a text queue in place and a picture queue by requeue', async () => {
   const { buildSync } = requireFrom('esbuild');
   const outfile = join(here, '.ui-test.merge.cjs');
   buildSync({
@@ -84,22 +88,29 @@ test('the merge chip only appears for a queue the Host can actually fold', async
     /**
      * Render the chip over one queue.
      * @param {Array<object>} items - the initial `next-turn` contents.
-     * @returns {object} the container, the writes and a teardown.
+     * @returns {Promise<object>} the container, the call log and a teardown.
      */
     async function render(items) {
       let snapshot = items;
       // The face must be stable between renders: a fresh object per
       // `getSnapshot()` call makes useSyncExternalStore re-render forever.
       let cell = { 'next-turn': snapshot };
-      const face = {
-        subscribe: () => () => {},
-        getSnapshot: () => cell,
-      };
-      const writes = [];
+      const face = { subscribe: () => () => {}, getSnapshot: () => cell };
+      const calls = [];
       const session = {
         projections: { faceOf: () => face },
+        async readAttachment(ref) {
+          calls.push(['read', ref.attachmentId]);
+          return { ok: true, value: { attachment: ref, data: Uint8Array.from([1, 2, 3]) } };
+        },
+        async prompt(content, mode) {
+          calls.push(['prompt', mode, content]);
+          snapshot = [...snapshot, { id: 'merged', role: 'user', content }];
+          cell = { 'next-turn': snapshot };
+          return { ok: true, value: { accepted: true } };
+        },
         async updateQueue(id, action) {
-          writes.push([id, action]);
+          calls.push([id, action]);
           if (action.kind === 'edit') {
             snapshot = snapshot.map((item) => (item.id === id ? { ...item, content: action.content } : item));
           } else {
@@ -121,47 +132,64 @@ test('the merge chip only appears for a queue the Host can actually fold', async
         }),
       );
       await flush();
-      return { container, writes, root, requests };
+      return { container, calls, root };
     }
 
-    // The reported queue: two image-only messages. The Host refuses an edit of
-    // those (text blocks only), so the chip must not be there at all.
-    const imagesOnly = await render([
-      { id: 'i1', role: 'user', content: [image('a')] },
-      { id: 'i2', role: 'user', content: [image('b')] },
-    ]);
-    assert.equal(imagesOnly.container.querySelector('[data-cbp-merge]'), null, 'no chip for an image-only queue');
-    imagesOnly.root.unmount();
+    // One image and one text: nothing to fold, so no chip.
+    const single = await render([picture('i1', 'a')]);
+    assert.equal(single.container.querySelector('[data-cbp-merge]'), null, 'no chip for a single message');
+    single.root.unmount();
     await flush();
 
-    // Two text messages: the chip is there, badges 2, and folding it writes
-    // edit(first) then remove(second) with text-only content.
+    // Two text messages: the chip folds them in place.
     const texts = await render([queued('a', '第一条'), queued('b', '第二条')]);
     const chip = texts.container.querySelector('[data-cbp-merge]');
     assert.ok(chip, 'the chip renders for a foldable queue');
+    assert.equal(chip.getAttribute('data-cbp-merge-mode'), 'edit');
     assert.equal(chip.getAttribute('data-cbp-merge-batch'), '2');
     assert.equal(chip.getAttribute('aria-label'), zh['merge.label'](2));
-    texts.container.querySelector('[data-cbp-merge]').dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    chip.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
     await flush();
-    assert.deepEqual(texts.writes.map(([id, action]) => [id, action.kind]), [['a', 'edit'], ['b', 'remove']]);
-    assert.deepEqual(texts.writes[0][1].content, [{ type: 'text', text: '合并稿' }], 'the edit carries text only');
-    assert.equal(requests.at(-1).body.texts.length, 2, 'both texts were sent to the Host');
+    assert.deepEqual(texts.calls.slice(-2).map(([id, action]) => [id, action.kind]), [['a', 'edit'], ['b', 'remove']]);
     assert.equal(texts.container.querySelector('[data-cbp-merge]'), null, 'the chip leaves with the queue');
     texts.root.unmount();
     await flush();
 
-    // An image in front of two texts: the foldable run is the two texts, and the
-    // chip says the image stays behind instead of claiming a fold of three.
-    const mixed = await render([{ id: 'img', role: 'user', content: [image('c')] }, queued('a', '第一条'), queued('b', '第二条')]);
+    // Two image messages: the chip folds both pictures into ONE queued message.
+    const pictures = await render([picture('i1', 'a'), picture('i2', 'b')]);
+    const pictureChip = pictures.container.querySelector('[data-cbp-merge]');
+    assert.ok(pictureChip, 'an image-only queue can be merged');
+    assert.equal(pictureChip.getAttribute('data-cbp-merge-mode'), 'requeue');
+    assert.equal(pictureChip.getAttribute('aria-label'), zh['merge.labelImages'](2, 2));
+    pictureChip.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+    await flush();
+    const prompt = pictures.calls.find((call) => call[0] === 'prompt');
+    assert.ok(prompt, 'one new message is queued: ' + JSON.stringify(pictures.calls.map((call) => [call[0], call[1]])));
+    assert.equal(prompt[1], 'queue');
+    assert.deepEqual(prompt[2].map((part) => part.type), ['image', 'image'], 'both pictures ride on it');
+    assert.deepEqual(
+      pictures.calls.filter((call) => call[0] !== 'prompt' && call[0] !== 'read').map(([id, action]) => [id, action.kind]),
+      [['i1', 'remove'], ['i2', 'remove']],
+    );
+    assert.equal(pictures.container.querySelector('[data-cbp-merge]'), null, 'one merged message is left');
+    pictures.root.unmount();
+    await flush();
+
+    // Image then two texts: the whole queue folds, images first, merged text last.
+    const mixed = await render([picture('img', 'c'), queued('a', '第一条'), queued('b', '第二条')]);
     const mixedChip = mixed.container.querySelector('[data-cbp-merge]');
-    assert.ok(mixedChip, 'the text run after the image is mergeable');
-    assert.equal(mixedChip.getAttribute('data-cbp-merge-batch'), '2');
+    assert.ok(mixedChip, 'a mixed queue is mergeable');
+    assert.equal(mixedChip.getAttribute('data-cbp-merge-mode'), 'requeue');
     assert.equal(mixedChip.getAttribute('data-cbp-merge-count'), '3');
-    assert.equal(mixedChip.getAttribute('aria-label'), zh['merge.labelSkipped'](2, 1));
     mixedChip.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
     await flush();
-    assert.deepEqual(mixed.writes.map(([id, action]) => [id, action.kind]), [['a', 'edit'], ['b', 'remove']], 'the image is never written');
-    assert.equal(requests.at(-1).body.texts.length, 2);
+    const mixedPrompt = mixed.calls.find((call) => call[0] === 'prompt');
+    assert.deepEqual(mixedPrompt[2].map((part) => part.type), ['image', 'text'], 'images first, text last');
+    assert.equal(mixedPrompt[2][1].text, '合并稿');
+    assert.deepEqual(
+      mixed.calls.filter((call) => call[0] !== 'prompt' && call[0] !== 'read').map(([id, action]) => [id, action.kind]),
+      [['img', 'remove'], ['a', 'remove'], ['b', 'remove']],
+    );
     mixed.root.unmount();
     await flush();
   } finally {

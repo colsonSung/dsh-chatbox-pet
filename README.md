@@ -69,7 +69,7 @@ writes only `pet` to the prefs file; the other two switches keep their state.
 | **A work-state companion** | Each state transition gets its own clip, sound and one-line bubble. Repeated polls of the same state stay quiet. |
 | **Conversation, without sending** | Type `hi pika`, `pika pika`, `皮卡丘`, `电老鼠` or `pika` in the draft. It looks up at once and answers after a typing pause — **no message is sent**. |
 | **Prompt Boost** | A sparkle turns a rough draft into an executable prompt, using your configured model and optional personal context. Auto-applies, undoes, and never sends on your behalf. |
-| **Queue merge** | While the agent is busy, one chip folds a run of 2–8 queued text messages into a single coherent request. The result stays queued; messages carrying an image are never folded. |
+| **Queue merge** | While the agent is busy, one chip folds queued messages into a single coherent request — a run of 2–8 text messages in place, or a whole queue that carries images into one message with every picture on it. The result stays queued. |
 | **Small talk from your own notes** | Seven tones quoting your memory, meeting minutes, reading shelf or moments, with the source named. Local templates, no model call. |
 | **Direct manipulation** | Right-click to make it say an exact line, replay a line it remembers, or play one of 17 actions. |
 | **Video reading** | A host tool — `video_read` — turns a video file or a link into a timestamped transcript with speaker labels, OCR'd on-screen subtitles and keyframes. Local only; see [Video reading](#video-reading). |
@@ -114,10 +114,17 @@ anything.
 ### Merge queued follow-ups
 
 While the agent is busy, several short messages are often one request typed in
-a hurry. The merge chip appears only when at least two consecutive text-only
-messages are queued, and it folds that run (8 at a time). The first queued item
-is edited to the merged text and the rest are removed through the Host's own
-`session.updateQueue` path — the queue is not bypassed.
+a hurry — and sometimes each of them is a screenshot. The chip folds whichever
+is waiting:
+
+- **Text** — a run of at least two consecutive text-only messages, 8 at a time.
+  The first queued item is edited to the merged text and the rest are removed
+  through the Host's own `session.updateQueue` path.
+- **Images** — a queue holding pictures is folded whole into ONE queued message
+  that carries every image (up to 20) plus the merged text. The images are read
+  back from the session and queued with `session.prompt(…, 'queue')`, then the
+  originals are removed. A queue that grows meanwhile is left alone rather than
+  having the merged message land out of order.
 
 - The model only reorganises what you already wrote; it must not invent a
   requirement.
@@ -125,10 +132,10 @@ is edited to the merged text and the rest are removed through the Host's own
   **not optimised**.
 - If the queue changes while the answer is prepared, nothing is edited.
 - If the agent claims an item mid-merge, the partial result is reported.
-- A message carrying an image or a file is never folded: the Host's queue edit
-  takes text blocks only, so folding it would drop the attachment. A text run
-  after such a message still merges, and the chip says how many stay queued.
-  With no such run the chip is simply absent rather than failing on click.
+- A file (or any block that is not text or an image) is never folded: the page
+  has no way to re-admit a queued file. It splits the queue, a text run after it
+  still merges, and the chip says how many messages stay queued. With nothing
+  foldable the chip is absent rather than failing on click.
 
 ### Ask for small talk
 
@@ -320,8 +327,9 @@ plugin/
 ## Current limits
 
 - No character pack is included; you supply the artwork.
-- Queue merge folds a run of 2–8 consecutive text-only messages. Messages with
-  an image or a file stay queued.
+- Queue merge folds a text run of 2–8 messages in place, or a queue with images
+  whole (up to 20 pictures per merged message). Messages carrying a file stay
+  queued.
 - Small talk is intentionally local and templated, not free-form model chat.
 - The pet exists where the session composer exists; it is not a separate
   desktop window.
