@@ -12,6 +12,14 @@
  * merged text and the rest are REMOVED. That order matters — if a removal
  * fails midway the reader is left with the merged text plus a duplicate they
  * can see and delete, never with the text already gone.
+ *
+ * What may be folded is decided by the Host, not by taste: `updateQueue`'s edit
+ * action carries `TextBlock[]` only and rejects any non-text block
+ * (`session/attachment-invalid`, reason `QUEUE_EDIT_NON_TEXT`), and it rejects
+ * an edit without non-whitespace text. So a message holding an image or a file
+ * can never be folded — folding it would drop the attachment — and a queue with
+ * fewer than two text-only messages has nothing to fold. The chip is only
+ * offered when the Host would actually accept the write.
  */
 
 /**
@@ -51,12 +59,57 @@ export function hasAttachment(item) {
 }
 
 /**
+ * Can this queued item be folded into merged text at all?
+ *
+ * An item with an attachment cannot: the Host's queue edit replaces the message
+ * with text blocks, so the image would disappear. An item with no words in it
+ * has nothing to contribute either.
+ * @param {any} item - the queued item.
+ * @param {string} [text] - its text, when already read.
+ * @returns {boolean} true when the merge may fold it.
+ */
+export function isFoldable(item, text = textOf(item)) {
+  return typeof item?.id === 'string' && text !== '' && !hasAttachment(item);
+}
+
+/**
+ * Find the run of queued messages a merge may fold.
+ *
+ * Only CONSECUTIVE foldable items are taken, because the merged message sits at
+ * the first item's place in the queue: folding across an image would move the
+ * second message's words in front of it. The first run of two or more is the
+ * batch, so a queue of [image, a, b] folds a+b and leaves the image where it
+ * was, while [a, image, b] has no foldable run and offers no chip.
+ * @param {Array<any>} items - the queued items, in order.
+ * @param {Array<string>} texts - their texts, in order.
+ * @returns {{start: number, length: number}} the run, or `-1`/`0` when there is none.
+ */
+export function foldRun(items, texts) {
+  const list = Array.isArray(items) ? items : [];
+  const words = Array.isArray(texts) ? texts : [];
+  let index = 0;
+  while (index < list.length) {
+    if (!isFoldable(list[index], words[index] ?? '')) {
+      index += 1;
+      continue;
+    }
+    let end = index;
+    while (end + 1 < list.length && isFoldable(list[end + 1], words[end + 1] ?? '')) end += 1;
+    if (end - index + 1 >= 2) return { start: index, length: end - index + 1 };
+    index = end + 1;
+  }
+  return { start: -1, length: 0 };
+}
+
+/**
  * The queue as the merge sees it.
  *
- * `mergeable` is the count the chip shows: only text-only items with words in
- * them can be folded, and a queue of one has nothing to fold.
+ * `batch` is the count the chip badges and the merge folds in one press: only
+ * the first run of text-only messages, capped at `MERGE_LIMIT`. `skipped` is
+ * how many queued items stay out of the fold (they carry an image or a file),
+ * which the chip says out loud instead of pretending it folded everything.
  * @param {any} session - the client Session.
- * @returns {{items: Array<any>, texts: string[], mergeable: number, blocked: string}} the queue view.
+ * @returns {{items: Array<any>, texts: string[], start: number, batch: number, batches: number, skipped: number, blocked: string}} the queue view.
  */
 export function readQueue(session) {
   let raw = [];
@@ -73,22 +126,23 @@ export function readQueue(session) {
 /**
  * The queue view for an already-read inbox cell.
  * @param {Array<any>} raw - the `next-turn` array.
- * @returns {{items: Array<any>, texts: string[], mergeable: number, blocked: string}} the queue view.
+ * @returns {{items: Array<any>, texts: string[], start: number, batch: number, batches: number, skipped: number, blocked: string}} the queue view.
  */
 export function readItems(raw) {
   const list = Array.isArray(raw) ? raw : [];
   const items = list.filter((item) => item !== null && typeof item === 'object' && typeof item.id === 'string');
   const texts = items.map(textOf);
-  // Only the next batch is folded; the rest waits for the following press.
-  const batch = Math.min(items.length, MERGE_LIMIT);
-  const blocked = items.length < 2 ? 'too-few' : '';
+  const run = foldRun(items, texts);
+  // Nothing foldable (or only one message's words): the chip must not appear.
+  const blocked = run.length < 2 ? 'too-few' : '';
+  const batch = Math.min(run.length, MERGE_LIMIT);
   return {
     items,
     texts,
-    mergeable: items.length,
+    start: run.start,
     batch,
-    batches: Math.max(1, Math.ceil(items.length / MERGE_LIMIT)),
-    hasAttachment: items.some((item) => hasAttachment(item)),
+    batches: Math.max(1, Math.ceil(run.length / MERGE_LIMIT)),
+    skipped: Math.max(0, items.length - run.length),
     blocked,
   };
 }
@@ -146,38 +200,40 @@ export function joinTexts(texts) {
 /**
  * Replace N queued messages with one.
  *
- * Edits the first item, then removes the others one by one; the first failure
- * stops the loop and is reported, because continuing would remove messages
- * whose text the reader has not seen merged yet.
+ * Edits the first item with text only — the Host's queue edit takes
+ * `TextBlock[]` and rejects anything else — then removes the others one by one;
+ * the first failure stops the loop and is reported, because continuing would
+ * remove messages whose text the reader has not seen merged yet.
  * @param {any} session - the client Session.
  * @param {Array<any>} items - the queued items, in order.
  * @param {string} merged - the merged text.
- * @returns {Promise<{ok: boolean, merged: number, removed: number, error: string}>} the outcome.
+ * @returns {Promise<{ok: boolean, merged: number, removed: number, claimed: number, error: string}>} the outcome.
  */
 export async function applyMerge(session, items, merged) {
   const list = Array.isArray(items) ? items : [];
   const text = String(merged ?? '').trim();
-  if (list.length < 2 || text === '') return { ok: false, merged: 0, removed: 0, error: 'bad-input' };
-  if (typeof session?.updateQueue !== 'function') return { ok: false, merged: 0, removed: 0, error: 'no-session' };
+  if (list.length < 2 || text === '') return { ok: false, merged: 0, removed: 0, claimed: 0, error: 'bad-input' };
+  if (typeof session?.updateQueue !== 'function') return { ok: false, merged: 0, removed: 0, claimed: 0, error: 'no-session' };
+  // An attachment cannot survive a text edit; refuse before touching the queue
+  // rather than folding a message whose image would vanish.
+  if (list.some((item) => hasAttachment(item))) {
+    return { ok: false, merged: 0, removed: 0, claimed: 0, error: 'has-attachment' };
+  }
+  if (list.some((item) => textOf(item) === '')) {
+    return { ok: false, merged: 0, removed: 0, claimed: 0, error: 'bad-input' };
+  }
 
   const [first, ...rest] = list;
-  // Attachments from every folded message ride along on the merged one: an edit
-  // that only carried text would silently drop the images the reader queued.
-  const attachments = list.flatMap((item) =>
-    (Array.isArray(item?.content) ? item.content : []).filter(
-      (block) => block !== null && typeof block === 'object' && block.type !== 'text',
-    ),
-  );
   try {
     const edited = await session.updateQueue(first.id, {
       kind: 'edit',
-      content: [{ type: 'text', text }, ...attachments],
+      content: [{ type: 'text', text }],
     });
     if (edited?.ok !== true) {
-      return { ok: false, merged: 0, removed: 0, error: edited?.error?.code ?? 'edit-failed' };
+      return { ok: false, merged: 0, removed: 0, claimed: 0, error: edited?.error?.code ?? 'edit-failed' };
     }
   } catch (error) {
-    return { ok: false, merged: 0, removed: 0, error: messageOf(error) };
+    return { ok: false, merged: 0, removed: 0, claimed: 0, error: messageOf(error) };
   }
 
   let removed = 0;
@@ -219,8 +275,8 @@ export async function applyMerge(session, items, merged) {
 export async function mergeQueue(input = {}) {
   const queue = readQueue(input.session);
   if (queue.blocked !== '') return { ok: false, count: 0, optimized: false, reason: '', error: queue.blocked };
-  // One batch per press: the queue may be longer than a single merge allows.
-  const batch = queue.items.slice(0, MERGE_LIMIT);
+  // One batch per press: only the foldable run, capped at MERGE_LIMIT.
+  const batch = queue.items.slice(queue.start, queue.start + queue.batch);
   const texts = batch.map(textOf);
   const merged = await requestMergedText(texts, {
     sessionId: input.sessionId,
@@ -230,15 +286,19 @@ export async function mergeQueue(input = {}) {
   // The queue is live. A message that settled while the model was merging is
   // not the same queue anymore; editing the snapshot would drop or duplicate
   // text, so stop and let the reader press the chip again on the new queue.
+  // The run is recomputed rather than assumed to be at the same offset: an item
+  // removed in front of it shifts it without changing what would be folded.
   const current = readQueue(input.session);
-  const currentBatch = current.items.slice(0, batch.length);
+  const currentBatch = current.blocked === ''
+    ? current.items.slice(current.start, current.start + batch.length)
+    : [];
   const sameItems =
     currentBatch.length === batch.length &&
     currentBatch.every((item, index) => item.id === batch[index].id && textOf(item) === texts[index]);
   if (!sameItems) {
     return { ok: false, count: batch.length, optimized: false, reason: '', error: 'queue-changed' };
   }
-  const applied = await applyMerge(input.session, batch, merged.prompt);
+  const applied = await applyMerge(input.session, currentBatch, merged.prompt);
   return {
     ok: applied.ok,
     count: batch.length,

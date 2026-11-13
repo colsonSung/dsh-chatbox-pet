@@ -1,17 +1,18 @@
 /**
  * The composer tool-row seat that merges the queue.
  *
- * It renders ONLY while at least two messages are waiting for the next turn —
- * a merge you cannot use is noise in a row that already holds five controls.
- * The count comes from the session's own inbox projection, so the chip appears
- * and disappears with the queue itself, including when the agent claims a
- * message mid-merge.
+ * It renders ONLY while at least two consecutive text-only messages are waiting
+ * for the next turn — a merge you cannot use is noise in a row that already
+ * holds five controls, and a chip that opens a write the Host refuses is worse
+ * than no chip. The count comes from the session's own inbox projection, so the
+ * chip appears and disappears with the queue itself, including when the agent
+ * claims a message mid-merge.
  */
 import * as React from 'react';
 import { cloneElement, useSyncExternalStore } from 'react';
 import { Tooltip as HostTooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 
-import { MERGE_LIMIT, mergeQueue, readItems } from './queue-merge.js';
+import { mergeQueue, readItems } from './queue-merge.js';
 import { IconMerge } from './boost/icons.jsx';
 
 /**
@@ -40,7 +41,7 @@ const EMPTY_FACE = Object.freeze({
  * moment the session opens); an unopened session simply subscribes to a face
  * that never changes.
  * @param {any} session - the client Session, or null.
- * @returns {{items: Array<any>, texts: string[], mergeable: number, blocked: string}} the queue view.
+ * @returns {object} the queue view from `readItems`.
  */
 function useQueue(session) {
   const face = (() => {
@@ -84,10 +85,11 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
   React.useEffect(() => () => window.clearTimeout(timerRef.current), []);
 
   const count = queue.items.length;
-  // Only a single message has nothing to fold. Attachments now survive the merge
-  // and a long queue is folded one batch per press, so neither hides the chip.
-  if (count < 2) return null;
-  const batch = queue.batch ?? Math.min(count, MERGE_LIMIT);
+  const batch = queue.batch ?? 0;
+  const skipped = queue.skipped ?? 0;
+  // Fewer than two consecutive text-only messages: the Host would refuse the
+  // edit, so the chip stays out of the row instead of opening a dead action.
+  if (batch < 2) return null;
 
   /**
    * Merge the queue and report what happened.
@@ -113,7 +115,11 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
             ? t('merge.changed')
             : result.error === 'session/queue-item-not-found'
               ? t('merge.claimed')
-              : t('merge.failed'),
+              : result.error === 'has-attachment' || result.error === 'session/attachment-invalid'
+                ? t('merge.attachments')
+                : result.error === 'bad-input' || result.error === 'empty'
+                  ? t('merge.empty')
+                  : t('merge.failed'),
         );
       }
     } catch {
@@ -130,9 +136,11 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
       ? t('merge.running')
       : outcome !== ''
         ? outcome
-        : batch < count
-          ? t('merge.labelBatch')(batch, count, queue.batches ?? 2)
-          : t('merge.label')(count);
+        : skipped > 0
+          ? t('merge.labelSkipped')(batch, skipped)
+          : batch < count
+            ? t('merge.labelBatch')(batch, count, queue.batches ?? 2)
+            : t('merge.label')(count);
   return (
     <Tip label={label}>
       <button
@@ -140,6 +148,7 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
         className="cbp-merge"
         data-cbp-merge
         data-cbp-merge-count={count}
+        data-cbp-merge-batch={batch}
         data-cbp-merge-phase={phase}
         aria-label={label}
         aria-busy={phase === 'running' ? 'true' : undefined}
@@ -151,7 +160,7 @@ export function QueueMergeButton({ sessionId, sessions, t, locale, onNotice }) {
       >
         <IconMerge />
         <span className="cbp-merge-count">{phase === 'running' ? '…' : batch}</span>
-        {batch < count ? <span className="cbp-merge-total">/{count}</span> : null}
+        {skipped === 0 && batch < count ? <span className="cbp-merge-total">/{count}</span> : null}
       </button>
     </Tip>
   );

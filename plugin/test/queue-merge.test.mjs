@@ -25,7 +25,9 @@ import {
 } from '../src/host/merge.js';
 import {
   applyMerge,
+  foldRun,
   hasAttachment as clientHasAttachment,
+  isFoldable,
   joinTexts,
   MERGE_LIMIT as CLIENT_MERGE_LIMIT,
   mergeQueue,
@@ -66,10 +68,11 @@ test('a merge needs at least two non-empty messages; a long queue is folded in b
   assert.equal(planMerge([]).reason, 'too-few');
   assert.equal(planMerge([queued('a', 'one'), queued('b', '   ')]).reason, 'empty');
 
-  // Attachments no longer block: the page carries the blocks onto the merged message.
+  // The Host's queue edit takes TextBlock[] only, so a folded attachment would
+  // be dropped: the batch is refused, not silently stripped.
   const withImage = planMerge([queued('a', 'one'), queued('b', 'two', [{ type: 'image', attachment: {} }])]);
-  assert.equal(withImage.ok, true);
-  assert.equal(withImage.reason, '');
+  assert.equal(withImage.ok, false);
+  assert.equal(withImage.reason, 'attachment');
 
   // A queue longer than one batch is not a refusal; only the batch is described.
   const tooMany = Array.from({ length: MERGE_LIMIT + 4 }, (_, index) => queued(String(index), `m${index}`));
@@ -110,24 +113,57 @@ test('the merge prompt forbids inventing requirements', () => {
   assert.match(user, /2\. 第二条/);
 });
 
-test('the chip counts the batch, and attachments no longer hide it', () => {
+test('the chip counts the foldable batch, and an image-only queue has none', () => {
   const view = readItems([queued('a', 'one'), queued('b', 'two'), queued('c', 'three')]);
   assert.equal(view.items.length, 3);
   assert.equal(view.blocked, '');
+  assert.equal(view.start, 0);
   assert.equal(view.batch, 3);
   assert.equal(view.batches, 1);
+  assert.equal(view.skipped, 0);
   assert.equal(readItems([queued('a', 'one')]).blocked, 'too-few');
   assert.equal(readItems([]).blocked, 'too-few');
 
-  const withFile = readItems([queued('a', 'one'), queued('b', 'two', [{ type: 'file', attachment: {} }])]);
-  assert.equal(withFile.blocked, '', 'an attachment no longer blocks the merge');
-  assert.equal(withFile.hasAttachment, true);
+  // The queue in the bug report: two image-only messages. Nothing to fold, and
+  // the Host would refuse the edit, so the chip must not be offered at all.
+  const imageOnly = readItems([
+    { id: 'a', content: [{ type: 'image', attachment: { attachmentId: 'i1' } }] },
+    { id: 'b', content: [{ type: 'image', attachment: { attachmentId: 'i2' } }] },
+  ]);
+  assert.equal(imageOnly.blocked, 'too-few');
+  assert.equal(imageOnly.batch, 0);
+  assert.equal(imageOnly.start, -1);
+  assert.equal(imageOnly.skipped, 2);
+
+  // An attachment inside the batch splits the run; the text run after it is
+  // still foldable, and the skipped count keeps the chip honest.
+  const mixed = readItems([queued('a', 'one'), queued('b', 'two', [{ type: 'file', attachment: {} }]), queued('c', 'three'), queued('d', 'four')]);
+  assert.equal(mixed.blocked, '');
+  assert.equal(mixed.start, 2);
+  assert.equal(mixed.batch, 2);
+  assert.equal(mixed.skipped, 2);
+
+  // Words, then an image, then words: folding across the image would move the
+  // second text in front of it, so there is no run and no chip.
+  const split = readItems([queued('a', 'one'), queued('b', 'two', [{ type: 'image', attachment: {} }]), queued('c', 'three')]);
+  assert.equal(split.blocked, 'too-few');
+  assert.equal(split.batch, 0);
 
   const long = readItems(Array.from({ length: CLIENT_MERGE_LIMIT + 5 }, (_, i) => queued(String(i), `m${i}`)));
   assert.equal(long.blocked, '');
   assert.equal(long.batch, CLIENT_MERGE_LIMIT);
   assert.equal(long.batches, 2);
   assert.equal(CLIENT_MERGE_LIMIT, MERGE_LIMIT);
+});
+
+test('only consecutive text-only messages are foldable', () => {
+  const image = { type: 'image', attachment: { attachmentId: 'x' } };
+  assert.equal(isFoldable(queued('a', 'one')), true);
+  assert.equal(isFoldable(queued('a', '   ')), false);
+  assert.equal(isFoldable(queued('a', 'one', [image])), false);
+  assert.equal(isFoldable({ content: [{ type: 'text', text: 'no id' }] }), false);
+  assert.deepEqual(foldRun([queued('a', 'one')], ['one']), { start: -1, length: 0 });
+  assert.deepEqual(foldRun([queued('a', 'one'), queued('b', 'two')], ['one', 'two']), { start: 0, length: 2 });
 });
 
 test('applying a merge edits the first item, then removes the rest', async () => {
@@ -149,30 +185,33 @@ test('applying a merge edits the first item, then removes the rest', async () =>
   ]);
 });
 
-test('附件的块会被搬到合并后的那条消息上，不会丢', async () => {
+test('a merge writes text only, and refuses a batch carrying an attachment', async () => {
   const calls = [];
   const image = { type: 'image', attachment: { attachmentId: 'img-1' } };
-  const file = { type: 'file', attachment: { attachmentId: 'file-1' } };
   const session = {
     async updateQueue(id, action) {
       calls.push([id, action]);
       return { ok: true };
     },
   };
-  const result = await applyMerge(
+  const ok = await applyMerge(
     session,
-    [
-      { id: 'a', content: [{ type: 'text', text: 'one' }, image] },
-      { id: 'b', content: [{ type: 'text', text: 'two' }] },
-      { id: 'c', content: [{ type: 'text', text: 'three' }, file] },
-    ],
-    'one two three',
+    [{ id: 'a', content: [{ type: 'text', text: 'one' }] }, { id: 'b', content: [{ type: 'text', text: 'two' }] }],
+    'one two',
   );
-  assert.equal(result.ok, true);
+  assert.equal(ok.ok, true);
   const edit = calls.find(([, action]) => action.kind === 'edit');
-  assert.ok(edit, 'the first item is edited');
-  assert.deepEqual(edit[1].content[0], { type: 'text', text: 'one two three' });
-  assert.deepEqual(edit[1].content.slice(1), [image, file], 'both attachments ride along');
+  assert.deepEqual(edit[1].content, [{ type: 'text', text: 'one two' }], 'the edit carries text blocks only');
+
+  calls.length = 0;
+  const refused = await applyMerge(
+    session,
+    [{ id: 'a', content: [{ type: 'text', text: 'one' }, image] }, { id: 'b', content: [{ type: 'text', text: 'two' }] }],
+    'one two',
+  );
+  assert.equal(refused.ok, false);
+  assert.equal(refused.error, 'has-attachment');
+  assert.deepEqual(calls, [], 'nothing is written when an attachment would be dropped');
 });
 
 test('a failed edit stops the merge before anything is removed', async () => {
@@ -270,6 +309,56 @@ test('mergeQueue refuses a queue it cannot fold, and touches nothing', async () 
   assert.equal(touched, 0);
 });
 
+test('an image-only queue is refused before the model is asked', async () => {
+  let asked = 0;
+  let touched = 0;
+  const images = [
+    { id: 'a', content: [{ type: 'image', attachment: { attachmentId: 'i1' } }] },
+    { id: 'b', content: [{ type: 'image', attachment: { attachmentId: 'i2' } }] },
+  ];
+  const session = {
+    projections: { faceOf: () => ({ getSnapshot: () => ({ 'next-turn': images }) }) },
+    async updateQueue() {
+      touched += 1;
+      return { ok: true };
+    },
+  };
+  const result = await mergeQueue({
+    session,
+    sessionId: 's',
+    fetchImpl: async () => {
+      asked += 1;
+      return { ok: false };
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'too-few');
+  assert.equal(asked, 0, 'no model call for a queue with nothing to fold');
+  assert.equal(touched, 0, 'no queue write either');
+});
+
+test('a text run after an image is the batch, and the image stays queued', async () => {
+  const image = { id: 'img', content: [{ type: 'image', attachment: { attachmentId: 'i1' } }] };
+  const first = queued('a', '第一条');
+  const second = queued('b', '第二条');
+  const calls = [];
+  const session = {
+    projections: { faceOf: () => ({ getSnapshot: () => ({ 'next-turn': [image, first, second] }) }) },
+    async updateQueue(id, action) {
+      calls.push([id, action.kind]);
+      return { ok: true };
+    },
+  };
+  const result = await mergeQueue({
+    session,
+    sessionId: 's',
+    fetchImpl: async () => ({ ok: true, json: async () => ({ ok: true, result: { prompt: '合并稿', optimized: true, reason: '' } }) }),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.count, 2);
+  assert.deepEqual(calls, [['a', 'edit'], ['b', 'remove']], 'the image item is never written');
+});
+
 test('the host merge returns the model text, and degrades to a join', async () => {
   const { mergeQueuedPrompts } = await import('../src/host/boost/optimize.js');
   const deps = {
@@ -300,6 +389,12 @@ test('the host merge returns the model text, and degrades to a join', async () =
   );
   assert.equal(failed.prompt, '第一条\n\n第二条');
   assert.equal(failed.reason, 'model-failed');
+
+  // One text plus one attachment-only entry is not a merge: the page would have
+  // to edit a message it cannot edit.
+  const halfEmpty = await mergeQueuedPrompts({ texts: ['第一条', ''] }, deps);
+  assert.equal(halfEmpty.optimized, false);
+  assert.equal(halfEmpty.reason, 'too-few');
 });
 
 test('mergeQueue runs the whole path end to end', async () => {

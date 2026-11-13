@@ -365,6 +365,10 @@ export async function mergeQueuedPrompts(payload, deps = {}) {
 
   if (texts.length < 2) return fallback('too-few');
   if (localJoin === '') return fallback('empty');
+  // A batch with one empty entry is an attachment-only or half-empty queue: the
+  // page refuses that write (the Host's queue edit takes text only), so do not
+  // "merge" the one text that is there and call it done.
+  if (texts.filter((text) => text.trim() !== '').length < 2) return fallback('too-few');
 
   let llm;
   let agentDefaultModel;

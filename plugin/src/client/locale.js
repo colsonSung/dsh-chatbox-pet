@@ -71,12 +71,15 @@ export const zh = {
   'sheet.video.promptWith': (link) => `用 video_read 看这个视频：${link}。总结它讲了什么、有谁在说话，并按时间码列出关键片段。`,
   'merge.label': (n) => `合并 ${n} 条排队消息`,
   'merge.labelBatch': (batch, total, batches) => `合并前 ${batch} 条（共 ${total} 条，分 ${batches} 批）`,
+  'merge.labelSkipped': (batch, skipped) => `合并 ${batch} 条文字消息（${skipped} 条含图片，不参与合并）`,
   'merge.running': '正在合并…',
   'merge.done': (n) => `已把 ${n} 条合并成 1 条`,
   'merge.donePlain': (n) => `已合并 ${n} 条（未优化）`,
   'merge.failed': '合并未完成，请检查队列',
   'merge.changed': '队列已变化，请重新合并',
   'merge.claimed': '有消息已被智能体取走，请检查队列',
+  'merge.attachments': '含图片的消息不能合并，先把它编辑成文字',
+  'merge.empty': '这些消息没有可合并的文字',
 };
 
 export const en = {
@@ -143,10 +146,13 @@ export const en = {
   'sheet.video.promptWith': (link) => `Use video_read on this video: ${link}. Summarise what it says, who speaks, and list the key moments with timestamps.`,
   'merge.label': (n) => `Merge ${n} queued messages`,
   'merge.labelBatch': (batch, total, batches) => `Merge the first ${batch} (${total} in ${batches} batches)`,
+  'merge.labelSkipped': (batch, skipped) => `Merge ${batch} text messages (${skipped} with an image stay queued)`,
   'merge.running': 'Merging…',
   'merge.done': (n) => `Merged ${n} into one`,
   'merge.donePlain': (n) => `Merged ${n} (not optimised)`,
   'merge.failed': 'Merge incomplete; check the queue',
   'merge.changed': 'The queue changed; merge again',
   'merge.claimed': 'The agent claimed a message; check the queue',
+  'merge.attachments': 'A message with an image cannot be merged; edit it to text first',
+  'merge.empty': 'These messages have no text to merge',
 };

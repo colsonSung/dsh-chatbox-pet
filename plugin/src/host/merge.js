@@ -56,8 +56,10 @@ export function hasAttachment(item) {
  *
  * A long queue is not a refusal any more: only the first `limit` items are
  * described, and the page folds the same slice, so a queue of thirty is merged
- * in batches. Attachments no longer block the merge either — the page carries
- * every non-text block onto the merged message, so nothing is lost.
+ * in batches. Attachments still refuse the batch they are in: the Host's queue
+ * edit accepts `TextBlock[]` only (it answers `session/attachment-invalid`,
+ * `QUEUE_EDIT_NON_TEXT`), so folding a message that carries an image would drop
+ * the image rather than preserve it.
  * @param {Array<any>} items - the queued items, in order.
  * @param {number} [limit] - the most items one merge will fold.
  * @returns {{ok: boolean, reason: string, items: Array<any>, texts: string[], total: number}} the verdict.
@@ -68,6 +70,7 @@ export function planMerge(items, limit = MERGE_LIMIT) {
   const batch = all.slice(0, Math.max(2, limit));
   const texts = batch.map(textOf);
   const total = all.length;
+  if (batch.some((item) => hasAttachment(item))) return { ok: false, reason: 'attachment', items: batch, texts, total };
   if (texts.every((text) => text === '')) return { ok: false, reason: 'empty', items: batch, texts, total };
   if (texts.some((text) => text === '')) return { ok: false, reason: 'empty', items: batch, texts, total };
   return { ok: true, reason: '', items: batch, texts, total };
