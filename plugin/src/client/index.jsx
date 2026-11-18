@@ -201,15 +201,17 @@ export function apply(ctx) {
     ),
   );
 
-  // The quick-actions seat: the "更多" pill beside the pet, with the shortcut
-  // panel behind it. It writes into the composer through the slot's own
+  // The quick-actions seat: the "更多" chip in the composer's bottom tool row,
+  // immediately before the model selector (`conversation.input.right` renders
+  // just ahead of `conversation.input.model`; verified in the running
+  // Conversation bundle). It writes into the composer through the slot's own
   // inputActions face, so it needs no Host route and no extra service.
-  ctx.slots.inject('conversation.input.dock', () =>
+  ctx.slots.inject('conversation.input.right', () =>
     ctx.slots.register(
       {
-        name: 'conversation.input.dock',
+        name: 'conversation.input.right',
         id: '@local/chatbox-pet/quick-actions',
-        order: 2,
+        order: 1,
         label: () => t('quick.label'),
         locale: NS,
         inject: (sessionId) => ({ sessionId }),

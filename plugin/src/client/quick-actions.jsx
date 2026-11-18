@@ -1,12 +1,16 @@
 /**
- * The "更多" seat: one glass pill **inside** the composer's top-right corner
- * that opens a panel of shortcuts (录音转写 / 图像生成 / 帮我写作 / …).
+ * The "更多" seat: one ghost chip in the composer's bottom tool row, immediately
+ * to the left of the model selector, that opens a panel of shortcuts
+ * (录音转写 / 图像生成 / 帮我写作 / …).
  *
- * Placement: the seat mounts as a direct child of the Host's
- * `[data-composer-card="true"]` (position:relative, overflow:visible — verified
- * in the live DOM) and is absolutely positioned at its top-right. The editor's
- * right padding is widened by the stylesheet so the pill never sits on top of
- * typed text.
+ * Placement: the seat renders in the Host's `conversation.input.right` list,
+ * which the composer lays out immediately before `conversation.input.model`
+ * (verified in the running build's Conversation bundle: `standardControls`
+ * renders `input.right` then `input.model`). The seat therefore renders in
+ * flow — no portal, no absolute positioning, and no padding reserved on the
+ * editor. Geometry follows the row it lives in: 28px tall, 13px/500 text,
+ * `--dsw-radius-sm`, hover fill — the same chrome as the Host's own
+ * `.select` controls beside it.
  *
  * What a shortcut does: it writes the template into the composer draft and
  * closes. It never sends and never starts a request — the reader still presses
@@ -112,24 +116,6 @@ function Icon({ name }) {
 }
 
 /**
- * Find the Host's composer card the seat should live in.
- *
- * The card carries `data-composer-card="true"` (verified in the live DOM). When
- * the seat was rendered in a dock slot, walk up from the docked root to the
- * nearest card; when that fails (blank-session hero composer, or a future slot
- * change), fall back to the first card in the document.
- * @returns {HTMLElement|null} the card, or null if no composer is on screen.
- */
-function findComposerCard() {
-  const docked = document.querySelector('.cbp-quick');
-  if (docked && typeof docked.closest === 'function') {
-    const card = docked.closest('[data-composer-card="true"]');
-    if (card) return card;
-  }
-  return document.querySelector('[data-composer-card="true"]');
-}
-
-/**
  * The translation workbench inside the panel's own sheet.
  * @param {object} props - `{ t, locale, inputActions, onClose }`.
  * @returns {object} the element.
@@ -156,20 +142,13 @@ export function QuickActionsDock({ inputActions, t, locale, sessionId = '' }) {
   // Which workbench is open, if any. Only shortcuts with a real capability
   // behind them set this; the rest still just fill a prompt.
   const [sheet, setSheet] = React.useState(null);
-  // Fixed-position coordinates for the portal: right/bottom edges of the pill.
+  // Fixed-position coordinates for the panel portal: right/bottom edges of the chip.
   const [anchor, setAnchor] = React.useState(null);
   const buttonRef = React.useRef(null);
   const panelRef = React.useRef(null);
-  // The seat itself is rendered in the dock slot; the visible pill is portaled
-  // into the composer card so it sits *inside* the card's top-right corner.
-  const [card, setCard] = React.useState(null);
-
-  React.useEffect(() => {
-    setCard(findComposerCard());
-  }, []);
 
   /**
-   * Anchor the panel above the pill, right edges aligned.
+   * Anchor the panel above the chip, right edges aligned.
    * @returns {void}
    */
   const reposition = React.useCallback(() => {
@@ -245,27 +224,26 @@ export function QuickActionsDock({ inputActions, t, locale, sessionId = '' }) {
   const label = t('quick.label');
   const active = typeof locale === 'function' ? locale() : 'zh';
 
-  // The shell pins every button to a 44px touch target on phones with
-  // !important, so a stylesheet rule cannot shrink this chip. Inline important
-  // declarations can, and they are re-applied when the breakpoint changes.
+  // Some shells pin every composer button to a 44px touch target on phones. If
+  // such a rule beats the stylesheet, clamp the chip back to the row's 28px so
+  // it cannot stretch the tool row; nothing is written when no rule applies.
   React.useEffect(() => {
     const node = buttonRef.current;
     if (node === null) return undefined;
-    const narrow = window.matchMedia('(max-width:520px)');
-    const tiny = window.matchMedia('(max-width:380px)');
-    const apply = () => {
-      const height = !narrow.matches ? 0 : tiny.matches ? 20 : 22;
-      for (const property of ['height', 'min-height', 'max-height', 'line-height']) {
-        if (height === 0) node.style.removeProperty(property);
-        else node.style.setProperty(property, `${height}px`, 'important');
+    const clamp = () => {
+      const pinned = node.offsetHeight > 34;
+      for (const property of ['height', 'min-height', 'max-height']) {
+        if (pinned) node.style.setProperty(property, '28px', 'important');
+        else node.style.removeProperty(property);
       }
     };
-    apply();
-    narrow.addEventListener('change', apply);
-    tiny.addEventListener('change', apply);
+    clamp();
+    window.addEventListener('resize', clamp);
+    const coarse = typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null;
+    coarse?.addEventListener('change', clamp);
     return () => {
-      narrow.removeEventListener('change', apply);
-      tiny.removeEventListener('change', apply);
+      window.removeEventListener('resize', clamp);
+      coarse?.removeEventListener('change', clamp);
     };
   }, []);
 
@@ -339,8 +317,7 @@ export function QuickActionsDock({ inputActions, t, locale, sessionId = '' }) {
 
   return (
     <>
-      <span className="cbp-quick" style={{ display: 'none' }} aria-hidden="true" />
-      {card !== null ? createPortal(pill, card) : null}
+      {pill}
       {panel}
       {sheet === 'transcribe' ? <TranscribeSheet t={t} locale={locale} onClose={() => setSheet(null)} onFill={finish} /> : null}
       {sheet === 'write' ? (
@@ -355,55 +332,42 @@ export function QuickActionsDock({ inputActions, t, locale, sessionId = '' }) {
   );
 }
 
-/** The seat's stylesheet: glass pill inside the card + a glass panel above it. */
+/** The seat's stylesheet: a tool-row ghost chip + a glass panel above it. */
 export const QUICK_CSS = `
-/* Give the typed text room: the pill occupies the card's top-right ~110px.
-   The editor's own right padding (8px) would let text run under the pill. */
-[data-composer-card="true"] [class*="_input"]{
-  padding-right:118px !important;
-}
+/* The chip lives in the Host's tool row (conversation.input.right), so it
+   carries no absolute position, no backdrop and no shadow of its own: it is
+   chrome-shaped like the model and permission selects beside it — 28px tall, 13px/500
+   label, --dsw-radius-sm, a flat hover fill from Host tokens. */
 .cbp-more{
-  position:absolute;
-  top:12px;
-  right:12px;
-  z-index:5;
+  box-sizing:border-box;
   display:inline-flex;
   align-items:center;
   gap:5px;
   height:28px;
-  padding:0 12px;
-  border-radius:999px;
-  /* Glass: a translucent surface, blurred and saturated backdrop, a hairline
-     with a light top edge, and a soft shadow — not a flat opaque chip. */
-  border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 10%,transparent);
-  border-top-color:color-mix(in oklab,#ffffff 55%,transparent);
-  background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#ffffff) 42%,transparent);
-  -webkit-backdrop-filter:blur(18px) saturate(160%);
-  backdrop-filter:blur(18px) saturate(160%);
-  box-shadow:0 1px 2px color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 6%,transparent),0 6px 18px -8px color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 22%,transparent),inset 0 1px 0 color-mix(in oklab,#ffffff 40%,transparent);
+  margin:0;
+  padding:0 8px;
+  border:0;
+  border-radius:var(--dsw-radius-sm,8px);
+  background:transparent;
   color:var(--dsw-alias-label-secondary);
-  font-size:12px;
+  font-family:inherit;
+  font-size:13px;
   font-weight:500;
   line-height:1;
+  white-space:nowrap;
+  flex:none;
   cursor:pointer;
-  transition:background-color 120ms ease,color 120ms ease,border-color 120ms ease,box-shadow 120ms ease;
-}
-body[data-ds-dark-theme] .cbp-more{
-  background:color-mix(in oklab,#ffffff 10%,transparent);
-  border-color:color-mix(in oklab,#ffffff 16%,transparent);
-  border-top-color:color-mix(in oklab,#ffffff 26%,transparent);
-  box-shadow:0 1px 2px rgba(0,0,0,.2),0 6px 18px -8px rgba(0,0,0,.45),inset 0 1px 0 color-mix(in oklab,#ffffff 12%,transparent);
+  -webkit-appearance:none;
+  appearance:none;
+  transition:background-color 120ms ease,color 120ms ease;
 }
 .cbp-more:hover{
+  background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
   color:var(--dsw-alias-label-primary);
-  background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#ffffff) 62%,transparent);
-}
-body[data-ds-dark-theme] .cbp-more:hover{
-  background:color-mix(in oklab,#ffffff 16%,transparent);
 }
 .cbp-more[aria-expanded="true"]{
+  background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
   color:var(--dsw-alias-label-primary);
-  border-color:color-mix(in oklab,var(--dsw-alias-label-primary) 18%,transparent);
 }
 .cbp-more:focus-visible{
   outline:2px solid var(--dsw-alias-brand-primary);
@@ -414,12 +378,19 @@ body[data-ds-dark-theme] .cbp-more:hover{
   cursor:default;
 }
 .cbp-more svg{
-  width:14px;
-  height:14px;
+  width:15px;
+  height:15px;
   display:block;
+  flex:none;
 }
 .cbp-more-label{
   white-space:nowrap;
+}
+/* The row is a container query container, so its own 560px breakpoint can drop
+   the word: the icon alone is what fits next to the model selector there. */
+@container (width <= 560px){
+  .cbp-more{padding:0;width:28px;justify-content:center;gap:0}
+  .cbp-more-label{display:none}
 }
 .cbp-quick-panel{
   position:fixed;
@@ -428,7 +399,8 @@ body[data-ds-dark-theme] .cbp-more:hover{
   width:316px;
   padding:12px 12px 14px;
   border-radius:18px;
-  /* Same glass recipe as the pill, stronger blur so text stays readable. */
+  /* Glass: the chip is flat in the row, but the panel that floats over the
+     page needs a surface of its own or it reads as loose text. */
   border:1px solid color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 10%,transparent);
   border-top-color:color-mix(in oklab,#ffffff 55%,transparent);
   background:color-mix(in oklab,var(--dsw-alias-bg-overlay,#ffffff) 62%,transparent);
@@ -507,37 +479,16 @@ body[data-ds-dark-theme] .cbp-quick-panel{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-/* Phones: the pill sits inside a narrow composer, so it has to be flat and
-   light — a 28px capsule with a heavy shadow reads as a floating button and
-   eats the first line of the input. */
+/* Phones: the tool row keeps its own 28px rhythm, so the chip only becomes
+   tighter — never taller — and the panel is bounded by the viewport. */
 @media (max-width:520px){
-  /* The shell pins every button to a 44px touch target on phones (!important),
-     which is what made this pill look tall. A word chip is not a primary
-     control, so the height has to be forced back down here. */
-  .cbp-more{
-    top:8px !important;
-    right:8px !important;
-    height:22px !important;
-    min-height:22px !important;
-    max-height:22px !important;
-    padding:0 9px !important;
-    gap:4px !important;
-    font-size:11px !important;
-    line-height:22px !important;
-    border-radius:999px !important;
-    box-shadow:0 1px 1px color-mix(in oklab,var(--dsw-alias-label-primary,#0f1115) 5%,transparent),inset 0 1px 0 color-mix(in oklab,#ffffff 32%,transparent) !important;
-    -webkit-backdrop-filter:blur(12px) saturate(140%) !important;
-    backdrop-filter:blur(12px) saturate(140%) !important;
-  }
-  .cbp-more svg{width:11px !important;height:11px !important}
-  /* The pill is shorter but not narrower — it still holds an icon and a word. */
-  [data-composer-card="true"] [class*="_input"]{padding-right:100px !important}
+  .cbp-more{font-size:12.5px;padding:0 7px;gap:4px}
+  .cbp-more svg{width:14px;height:14px}
   .cbp-quick-panel{width:min(316px,calc(100vw - 24px))}
 }
 @media (max-width:380px){
-  .cbp-more{height:20px !important;min-height:20px !important;max-height:20px !important;line-height:20px !important;padding:0 8px !important;font-size:10.5px !important;gap:3px !important}
-  .cbp-more svg{width:10px !important;height:10px !important}
-  [data-composer-card="true"] [class*="_input"]{padding-right:92px !important}
+  .cbp-more{font-size:12px;padding:0 6px}
+  .cbp-more svg{width:13px;height:13px}
 }
 @media (prefers-reduced-motion: reduce){
   .cbp-quick-panel{animation:none}

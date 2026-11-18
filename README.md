@@ -73,7 +73,7 @@ writes only `pet` to the prefs file; the other two switches keep their state.
 | **Small talk from your own notes** | Seven tones quoting your memory, meeting minutes, reading shelf or moments, with the source named. Local templates, no model call. |
 | **Direct manipulation** | Right-click to make it say an exact line, replay a line it remembers, or play one of 17 actions. |
 | **Video reading** | A host tool — `video_read` — turns a video file or a link into a timestamped transcript with speaker labels, OCR'd on-screen subtitles and keyframes. Local only; see [Video reading](#video-reading). |
-| **Quick actions** | A glass "More" pill **inside** the composer's top-right corner opens a panel of shortcuts (transcribe, image, writing, video, read video, music, slides). A shortcut only fills the draft — it never sends. See [Quick actions](#quick-actions). |
+| **Quick actions** | A compact "More" control in the composer's bottom tool row, immediately left of the model selector, opens a panel of shortcuts (transcribe, image, writing, video, read video, music, slides). A shortcut only fills the draft — it never sends. See [Quick actions](#quick-actions). |
 | **Translation** | Inside the "More" panel: type, speak or drop a PDF/DOCX/TXT/MD/HTML, get a translation from your own model, and keep words and sentences in a favourite book with search and Markdown export. See [Translation](#translation). |
 
 ## Using it
@@ -181,9 +181,13 @@ Each gap is reported in `warnings`.
 
 ## Quick actions
 
-A glass **More** pill sits **inside** the composer's top-right corner (the editor's
-right padding is widened so the pill never covers typed text). It opens a glass
-panel of shortcuts:
+A compact **More** control sits in the composer's **bottom tool row**, immediately
+to the left of the model selector — it is registered in the Host's
+`conversation.input.right` slot, which the composer lays out just before
+`conversation.input.model`, so the chip renders in flow with the row's own
+controls (28px tall, 13px/500, ghost until hover; the word drops out below a 560px
+row, where the icon and the tooltip carry it). It opens a glass panel of
+shortcuts:
 
 | | |
 | --- | --- |
